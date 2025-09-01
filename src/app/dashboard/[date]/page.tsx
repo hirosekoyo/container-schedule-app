@@ -39,16 +39,12 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">船舶図</h2>
           {/* 横スクロール用のコンテナ */}
-          <div className="overflow-x-auto py-4">
-            {/* 
-              ↓ ここが重要！
-              ガントチャートのコンテナに具体的な高さを指定します。
-              h-[80vh] は「ビューポートの高さの80%」という意味です。
-              h-[900px] のような固定ピクセル値でも構いません。
-            */}
-            <div className="relative h-[80vh]" style={{ minWidth: `1800px` }}>
+          <div className="overflow-x-auto">
+            {/* ガントチャートのコンテナに高さを指定 */}
+            <div className="relative" style={{ minWidth: `1800px`, height: `80vh` }}>
               <Suspense fallback={<div>ガントチャートを読み込み中...</div>}>
-                <GanttChart schedules={schedules} />
+                {/* GanttChartを呼び出すだけ！ baseDateを渡すのを忘れない */}
+                <GanttChart schedules={schedules} baseDate={date} />
               </Suspense>
             </div>
           </div>
