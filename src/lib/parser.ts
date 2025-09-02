@@ -6,7 +6,7 @@ const BIT_LENGTH_M = 30;
 const MIN_BIT_NUMBER = 33;
 
 const REGEX_MAP = {
-  shipName: /^(?:\d+\s+)?(?:◆\s*)?(.*?)\s*$/m,
+  shipName: /^(.*?)\s*$/m,
   loa: /(?:全長|LOA)\s*:?\s*([\d.]+)\s*m/i,
   mooring: /綱位置.*\((\d+)\s*(?:-|～)\s*(\d+)\)/,
   sternBit: /船尾ビット\s*:?\s*(\d+)(?:([+-])(\d+)m)?/,
@@ -28,6 +28,14 @@ const parseScheduleBlock = (
   if (!shipNameMatch || !loaMatch || !mooringMatch || !sternBitMatch || !dateTimeMatch) return [];
 
   try {
+    // --- 【ここからが修正箇所】 ---
+    // 1. まず、最初の行全体をそのまま取得する
+    const rawShipName = shipNameMatch[1].trim();
+    // 2. 取得した文字列から「◆」とそれに続く空白を置換して削除する
+    const ship_name = rawShipName.replace(/◆\s*/, '').trim();
+    // --- 【ここまで修正】 ---
+
+    // 位置情報の計算
     const sternMainBit = parseInt(sternBitMatch[1], 10);
     if (sternMainBit < MIN_BIT_NUMBER) return [];
     const sign = sternBitMatch[2];
@@ -42,7 +50,7 @@ const parseScheduleBlock = (
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
     const baseScheduleData = {
-      ship_name: shipNameMatch[1].trim(),
+      ship_name: ship_name, // ここに整形後の船名をセット
       berth_number: 6,
       arrival_side,
       bow_position_m: Math.round(bow_position_m_float),
@@ -71,8 +79,8 @@ const parseScheduleBlock = (
       schedules.push({
         ...baseScheduleData,
         schedule_date: currentDate.toISOString().split('T')[0],
-        arrival_time: arrivalDate.toISOString(), // 完全な日時を生成
-        departure_time: departureDate.toISOString(), // 完全な日時を生成
+        arrival_time: arrivalDate.toISOString(),
+        departure_time: departureDate.toISOString(),
       });
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
@@ -85,5 +93,7 @@ const parseScheduleBlock = (
 };
 
 export const parseMultipleSchedules = (fullText: string, referenceYear: number) => {
-  return fullText.split(/\n\s*\n/).filter(block => block.trim().length > 0).flatMap(block => parseScheduleBlock(block, referenceYear));
+  const trimmedText = fullText.trim();
+  const blocks = trimmedText.split(/\n\s*\n/).filter(block => block.trim().length > 0);
+  return blocks.flatMap(block => parseScheduleBlock(block, referenceYear));
 };
