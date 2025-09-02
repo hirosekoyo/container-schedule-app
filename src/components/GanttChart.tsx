@@ -1,18 +1,16 @@
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React from 'react';
 
-// --- 型定義 ---
 interface GanttChartProps {
   schedules: ScheduleWithOperations[];
-  baseDate: string; // 表示対象の基準日 'YYYY-MM-DD'
+  baseDate: string;
 }
 
-// --- 定数 ---
 const CHART_START_HOUR = 0;
-const CHART_END_HOUR = 26;
+const CHART_END_HOUR = 26; // 翌2時まで
 const TOTAL_CHART_HOURS = CHART_END_HOUR - CHART_START_HOUR;
 const CHART_START_BIT = 33;
-const CHART_END_BIT = 64; // 描画するビットの終点
+const CHART_END_BIT = 64;
 const BIT_LENGTH_M = 30;
 const BIT_WIDTH_PX = 56;
 
@@ -24,13 +22,28 @@ const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string
   const isArrivalDay = arrival.getUTCFullYear() === baseDate.getUTCFullYear() &&
                        arrival.getUTCMonth() === baseDate.getUTCMonth() &&
                        arrival.getUTCDate() === baseDate.getUTCDate();
-                       
-  const isDepartureDay = departure.getUTCFullYear() === baseDate.getUTCFullYear() &&
-                         departure.getUTCMonth() === baseDate.getUTCMonth() &&
-                         departure.getUTCDate() === baseDate.getUTCDate();
+
+  const nextDay = new Date(baseDate);
+  nextDay.setUTCDate(baseDate.getUTCDate() + 1);
+  const isDepartureNextDay = departure.getUTCFullYear() === nextDay.getUTCFullYear() &&
+                             departure.getUTCMonth() === nextDay.getUTCMonth() &&
+                             departure.getUTCDate() === nextDay.getUTCDate();
                          
   const startHour = isArrivalDay ? (arrival.getUTCHours() + arrival.getUTCMinutes() / 60) : 0;
-  const endHour = isDepartureDay ? (departure.getUTCHours() + departure.getUTCMinutes() / 60) : 24;
+  
+  // --- 【ここからが修正箇所】 ---
+  let calculatedEndHour: number;
+  if (isDepartureNextDay) {
+    calculatedEndHour = 24 + (departure.getUTCHours() + departure.getUTCMinutes() / 60);
+  } else if (departure > nextDay) {
+    calculatedEndHour = CHART_END_HOUR; // 2日以上滞在する場合
+  } else {
+    calculatedEndHour = departure.getUTCHours() + departure.getUTCMinutes() / 60;
+  }
+
+  // グラフの描画限界(26時)を超えないように、Math.minで終点を制限する
+  const endHour = Math.min(calculatedEndHour, CHART_END_HOUR);
+  // --- 【ここまで修正】 ---
 
   return { startHour, endHour };
 };
@@ -48,11 +61,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate }) => {
     <div className="relative h-full w-full pl-8 pt-8 font-sans">
       {/* --- 背景グリッド --- */}
       <div className="absolute inset-0">
-        {/* 横線 (時間軸) */}
         {timeLabels.map((_, i) => (
           <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} />
         ))}
-        {/* 縦線 (ビット軸) */}
         {bitLabels.map((_, i) => (
           <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * BIT_WIDTH_PX }} />
         ))}
@@ -62,10 +73,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate }) => {
       {schedules.map((schedule) => {
         const { startHour, endHour } = calculateBarRange(schedule, baseDate);
         if (endHour <= startHour) return null;
-
         const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
         const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
-
         const left_m = Math.min(Number(schedule.bow_position_m), Number(schedule.stern_position_m));
         const width_m = Math.abs(Number(schedule.bow_position_m) - Number(schedule.stern_position_m));
         const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * BIT_WIDTH_PX;
