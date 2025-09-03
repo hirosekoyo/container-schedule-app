@@ -1,108 +1,120 @@
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React from 'react';
 
+// --- 型定義と定数は変更なし ---
 interface GanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
 }
-
 const CHART_START_HOUR = 0;
-const CHART_END_HOUR = 26; // 翌2時まで
+const CHART_END_HOUR = 26;
 const TOTAL_CHART_HOURS = CHART_END_HOUR - CHART_START_HOUR;
 const CHART_START_BIT = 33;
 const CHART_END_BIT = 64;
 const BIT_LENGTH_M = 30;
 const BIT_WIDTH_PX = 56;
 
+// calculateBarRange関数は変更なし
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
   const arrival = new Date(schedule.arrival_time);
   const departure = new Date(schedule.departure_time);
   const baseDate = new Date(`${baseDateStr}T00:00:00Z`);
-
-  const isArrivalDay = arrival.getUTCFullYear() === baseDate.getUTCFullYear() &&
-                       arrival.getUTCMonth() === baseDate.getUTCMonth() &&
-                       arrival.getUTCDate() === baseDate.getUTCDate();
-
+  const isArrivalDay = arrival.getUTCFullYear() === baseDate.getUTCFullYear() && arrival.getUTCMonth() === baseDate.getUTCMonth() && arrival.getUTCDate() === baseDate.getUTCDate();
   const nextDay = new Date(baseDate);
   nextDay.setUTCDate(baseDate.getUTCDate() + 1);
-  const isDepartureNextDay = departure.getUTCFullYear() === nextDay.getUTCFullYear() &&
-                             departure.getUTCMonth() === nextDay.getUTCMonth() &&
-                             departure.getUTCDate() === nextDay.getUTCDate();
-                         
+  const isDepartureNextDay = departure.getUTCFullYear() === nextDay.getUTCFullYear() && departure.getUTCMonth() === nextDay.getUTCMonth() && departure.getUTCDate() === nextDay.getUTCDate();
   const startHour = isArrivalDay ? (arrival.getUTCHours() + arrival.getUTCMinutes() / 60) : 0;
-  
-  // --- 【ここからが修正箇所】 ---
-  let calculatedEndHour: number;
+  let endHour: number;
   if (isDepartureNextDay) {
-    calculatedEndHour = 24 + (departure.getUTCHours() + departure.getUTCMinutes() / 60);
+    endHour = 24 + (departure.getUTCHours() + departure.getUTCMinutes() / 60);
   } else if (departure > nextDay) {
-    calculatedEndHour = CHART_END_HOUR; // 2日以上滞在する場合
+    endHour = CHART_END_HOUR;
   } else {
-    calculatedEndHour = departure.getUTCHours() + departure.getUTCMinutes() / 60;
+    endHour = departure.getUTCHours() + departure.getUTCMinutes() / 60;
   }
-
-  // グラフの描画限界(26時)を超えないように、Math.minで終点を制限する
-  const endHour = Math.min(calculatedEndHour, CHART_END_HOUR);
-  // --- 【ここまで修正】 ---
-
-  return { startHour, endHour };
+  return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
 };
 
 const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate }) => {
-  // --- 軸ラベルの生成 ---
   const timeLabels = Array.from({ length: TOTAL_CHART_HOURS / 2 + 1 }, (_, i) => {
     const hour = CHART_START_HOUR + i * 2;
     if (hour >= 26) return hour - 24;
     return hour;
   });
   const bitLabels = Array.from({ length: CHART_END_BIT - CHART_START_BIT + 1 }, (_, i) => CHART_START_BIT + i);
+  const totalChartWidth = (CHART_END_BIT - CHART_START_BIT + 1) * BIT_WIDTH_PX;
 
   return (
-    <div className="relative h-full w-full pl-8 pt-8 font-sans">
-      {/* --- 背景グリッド --- */}
-      <div className="absolute inset-0">
-        {timeLabels.map((_, i) => (
-          <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} />
-        ))}
-        {bitLabels.map((_, i) => (
-          <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * BIT_WIDTH_PX }} />
-        ))}
-      </div>
-      
-      {/* --- 船舶ブロック --- */}
-      {schedules.map((schedule) => {
-        const { startHour, endHour } = calculateBarRange(schedule, baseDate);
-        if (endHour <= startHour) return null;
-        const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
-        const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
-        const left_m = Math.min(Number(schedule.bow_position_m), Number(schedule.stern_position_m));
-        const width_m = Math.abs(Number(schedule.bow_position_m) - Number(schedule.stern_position_m));
-        const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * BIT_WIDTH_PX;
-        const width = (width_m / BIT_LENGTH_M) * BIT_WIDTH_PX;
+    // --- 【ここからが修正箇所】 ---
+    // ルート要素をCSS Gridコンテナとして定義
+    <div
+      className="grid h-full w-full font-sans"
+      style={{
+        minWidth: `calc(2rem + ${totalChartWidth}px)`, // ラベル幅 + グラフ幅
+        gridTemplateColumns: '2rem 1fr', // 1列目: 2rem(ラベル用), 2列目: 残り全部
+        gridTemplateRows: '2rem 1fr',    // 1行目: 2rem(ラベル用), 2行目: 残り全部
+      }}
+    >
+      {/* 1. 左上の空のセル */}
+      <div></div>
 
-        return (
-          <div key={`${schedule.id}-${schedule.schedule_date}`} className="absolute flex items-center justify-center rounded-md border bg-sky-100 p-1 text-sky-800 shadow-sm" style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}>
-            <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm">
-              {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="truncate">{schedule.ship_name}</span></> ) : 
-               schedule.arrival_side === '右舷' ? ( <><span className="truncate">{schedule.ship_name}</span><span>→</span></> ) : 
-               ( <span className="truncate">{schedule.ship_name}</span> )}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* --- 軸ラベル --- */}
-      <div className="absolute -left-8 top-0 h-full pt-8">
-        {timeLabels.map((label, i) => (
-          <div key={`time-label-${i}`} className="absolute -translate-y-1/2 text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
-        ))}
-      </div>
-      <div className="absolute -top-6 left-0 w-full pl-8">
+      {/* 2. 横軸ラベルのセル */}
+      <div className="relative">
         {bitLabels.map((label, i) => (
-          <div key={`bit-label-${i}`} className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * BIT_WIDTH_PX }}>{label}</div>
+          <div
+            key={`bit-label-${i}`}
+            className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700"
+            style={{ left: i * BIT_WIDTH_PX }}
+          >
+            {label}
+          </div>
         ))}
+      </div>
+
+      {/* 3. 縦軸ラベルのセル */}
+      <div className="relative">
+        {timeLabels.map((label, i) => (
+          <div
+            key={`time-label-${i}`}
+            className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500"
+            style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {/* 4. グラフ本体（グリッドと船）のセル */}
+      <div className="relative h-full w-full">
+        {/* 背景グリッド */}
+        <div className="absolute inset-0">
+          {timeLabels.map((_, i) => ( <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
+          {bitLabels.map((_, i) => ( <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * BIT_WIDTH_PX }} /> ))}
+        </div>
+        
+        {/* 船舶ブロック */}
+        {schedules.map((schedule) => {
+          const { startHour, endHour } = calculateBarRange(schedule, baseDate);
+          if (endHour <= startHour) return null;
+          const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
+          const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
+          const left_m = Math.min(Number(schedule.bow_position_m), Number(schedule.stern_position_m));
+          const width_m = Math.abs(Number(schedule.bow_position_m) - Number(schedule.stern_position_m));
+          const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * BIT_WIDTH_PX;
+          const width = (width_m / BIT_LENGTH_M) * BIT_WIDTH_PX;
+          return (
+            <div key={`${schedule.id}-${schedule.schedule_date}`} className="absolute flex items-center justify-center rounded-md border bg-sky-100 p-1 text-sky-800 shadow-sm" style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}>
+              <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm">
+                {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="truncate">{schedule.ship_name}</span></> ) : 
+                 schedule.arrival_side === '右舷' ? ( <><span className="truncate">{schedule.ship_name}</span><span>→</span></> ) : 
+                 ( <span className="truncate">{schedule.ship_name}</span> )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
+    // --- 【ここまで修正】 ---
   );
 };
 

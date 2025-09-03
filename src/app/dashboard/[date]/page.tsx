@@ -28,20 +28,19 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
         
         <DashboardHeader date={date} report={report} />
         
-        {/* --- 【ここからが修正箇所】 --- */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">船舶図</h2>
-          <div className="overflow-x-auto">
-            {/* ガントチャートのコンテナに高さを指定 */}
-            <div className="relative" style={{ minWidth: `1800px`, height: `80vh` }}>
+          {/* overflow-x-auto を削除！ */}
+          <div>
+            {/* コンテナに高さを指定 */}
+            <div className="relative" style={{ height: `80vh` }}>
               <Suspense fallback={<div>ガントチャートを読み込み中...</div>}>
-                {/* シンプルな呼び出しに戻す */}
+                {/* GanttChartを呼び出すだけ */}
                 <GanttChart schedules={schedules} baseDate={date} />
               </Suspense>
             </div>
           </div>
         </div>
-        {/* --- 【ここまで修正】 --- */}
         
         {/* 詳細テーブル */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">

@@ -38,7 +38,7 @@ export default function ImportPage() {
         setMessage(`登録が完了しました。${data?.length || 0}件の予定が作成されました。`);
         setTextInput(''); // テキストエリアをクリア
         // 成功したらメインのダッシュボードに遷移
-        router.push(`/dashboard/${new Date().toISOString().split('T')[0]}`);
+        router.push(`/dashboard/${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}`);
       }
     });
   };
