@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 
 interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
+  latestImportId: string | null;
 }
 
 const metersToBitNotation = (meters: number | null | undefined): string => {
@@ -28,31 +29,19 @@ const metersToBitNotation = (meters: number | null | undefined): string => {
   return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
 };
 
-/**
- * 日付と時刻を表示するためのヘルパーコンポーネント
- */
 const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: string }> = ({
   scheduleDateStr,
   eventTimeStr,
 }) => {
   if (!scheduleDateStr) return null;
-
   const eventDateObj = new Date(eventTimeStr);
   const scheduleDateObj = new Date(`${scheduleDateStr}T00:00:00Z`);
-
   const eventDay = eventDateObj.getUTCDate();
   const scheduleDay = scheduleDateObj.getUTCDate();
-
-  const timeString = eventDateObj.toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  });
-
+  const timeString = eventDateObj.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
   if (eventDay !== scheduleDay) {
     const dateString = `${String(eventDateObj.getUTCDate()).padStart(2, '0')}日`;
     return (
-      // div と text-center をやめて、spanとbrだけで構成する
       <span className="leading-tight">
         <span className="text-xs text-muted-foreground">{dateString}</span>
         <br />
@@ -60,11 +49,10 @@ const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: stri
       </span>
     );
   }
-
   return <span>{timeString}</span>;
 };
 
-const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules }) => {
+const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId }) => {
   return (
     <div className="w-full overflow-hidden rounded-lg border">
       <Table>
@@ -100,8 +88,22 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules }) => {
             const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
             const remarks = operations.map(op => op.remarks ?? '').join('\n');
 
+            // --- 【ここからが修正箇所】 ---
+            let rowClassName = '';
+            // latestImportId が存在する場合のみハイライト処理を行う
+            if (latestImportId) {
+              if (schedule.last_import_id !== latestImportId) {
+                // この行の鮮度が古い場合 -> 削除候補
+                rowClassName = 'bg-red-100/60';
+              } else if (schedule.update_flg) {
+                // 鮮度が最新で、かつ内容が変更された場合 -> 更新済み
+                rowClassName = 'bg-yellow-100/60';
+              }
+            }
+            // --- 【ここまで修正】 ---
+
             return (
-              <TableRow key={`${schedule.id}-${schedule.schedule_date}`}>
+              <TableRow key={`${schedule.id}-${schedule.schedule_date}`} className={rowClassName}>
                 <TableCell>{schedule.berth_number}岸</TableCell>
                 <TableCell className="font-medium">{schedule.ship_name}</TableCell>
                 <TableCell>

@@ -2,21 +2,31 @@ import DashboardHeader from '@/components/DashboardHeader';
 import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
 import { AddScheduleDialog } from '@/components/AddScheduleDialog';
-import { getDailyReportByDate, getSchedulesByDate } from '@/lib/supabase/actions';
+// 1. getLatestImportId をインポート
+import { getDailyReportByDate, getSchedulesByDate, getLatestImportId } from '@/lib/supabase/actions';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
+// 2. searchParams を受け取れるように props の型を修正
 interface DashboardPageProps {
   params: { date: string };
+  searchParams: { importId?: string };
 }
 
-export default async function DashboardPage({ params }: DashboardPageProps) {
+export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
   const { date } = params;
-  const [report, schedules] = await Promise.all([
+  
+  // 3. 3つの非同期処理を並列で実行
+  const [report, schedules, latestImportIdFromDB] = await Promise.all([
     getDailyReportByDate(date),
     getSchedulesByDate(date),
+    getLatestImportId(date), // DBからこの日の最新importIdを取得
   ]);
+
+  // 4. ハイライトの基準となるIDを決定
+  // URLクエリにあればそれを使い、なければDBから取得した最新IDを使う
+  const finalImportId = searchParams.importId || latestImportIdFromDB;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -30,23 +40,28 @@ export default async function DashboardPage({ params }: DashboardPageProps) {
         
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">船舶図</h2>
-          {/* overflow-x-auto を削除！ */}
+          {/* 
+            GanttChartの呼び出し部分は変更なし。
+            page.tsxのoverflow-x:autoも削除されたままでOK。
+          */}
           <div>
-            {/* コンテナに高さを指定 */}
             <div className="relative" style={{ height: `80vh` }}>
               <Suspense fallback={<div>ガントチャートを読み込み中...</div>}>
-                {/* GanttChartを呼び出すだけ */}
-                <GanttChart schedules={schedules} baseDate={date} />
+                  <GanttChart 
+                  schedules={schedules} 
+                  baseDate={date} 
+                  latestImportId={finalImportId} // 1. latestImportId を渡す
+                />
               </Suspense>
             </div>
           </div>
         </div>
         
-        {/* 詳細テーブル */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">荷役予定詳細</h2>
           <Suspense fallback={<div>テーブルを読み込み中...</div>}>
-        <ScheduleTable schedules={schedules} />
+            {/* 5. ScheduleTableに latestImportId を渡す */}
+            <ScheduleTable schedules={schedules} latestImportId={finalImportId} />
           </Suspense>
         </div>
       </main>

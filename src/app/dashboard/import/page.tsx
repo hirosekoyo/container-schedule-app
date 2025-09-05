@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { parseMultipleSchedules } from '@/lib/parser';
-import { createMultipleSchedules } from '@/lib/supabase/actions';
+import { importMultipleSchedules } from '@/lib/supabase/actions'; // 1. 呼び出す関数を変更
 import { useRouter } from 'next/navigation';
 import React, { useState, useTransition } from 'react';
 
@@ -17,28 +17,41 @@ export default function ImportPage() {
   const handleSubmit = () => {
     setMessage('');
     
-    // 現在の年を基準年としてパーサーに渡す
+    // 2. ユニークなインポートIDを生成
+    const importId = `imp-${Date.now()}`;
     const currentYear = new Date().getFullYear();
     
-    // 1. テキストを解析
-    const parsedData = parseMultipleSchedules(textInput, currentYear);
+    // 3. テキストを解析 (importIdを渡す)
+    const parsedData = parseMultipleSchedules(textInput, currentYear, importId);
 
     if (parsedData.length === 0) {
       setMessage('解析できるデータがありませんでした。テキストの形式を確認してください。');
       return;
     }
 
-    // 2. 解析データをサーバーアクションに渡して一括登録
     startTransition(async () => {
-      const { data, error } = await createMultipleSchedules(parsedData);
+      // 4. 新しいサーバーアクションを呼び出す
+      const { data, error } = await importMultipleSchedules(parsedData);
       
       if (error) {
         setMessage(`エラーが発生しました: ${error.message}`);
       } else {
-        setMessage(`登録が完了しました。${data?.length || 0}件の予定が作成されました。`);
-        setTextInput(''); // テキストエリアをクリア
-        // 成功したらメインのダッシュボードに遷移
-        router.push(`/dashboard/${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}`);
+        // 5. 処理結果のメッセージをDB関数の戻り値から生成
+        // @ts-ignore: rpcの戻り値の型が複雑なため一時的にignore
+        const { updated_count = 0, inserted_count = 0 } = data?.[0] || {};
+        setMessage(`登録が完了しました。新規: ${inserted_count}件, 更新: ${updated_count}件`);
+        setTextInput('');
+        
+        // 1. 今日の日付を取得
+        const today = new Date();
+        // 2. 明日の日付を計算
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        // 3. 'YYYY-MM-DD' 形式の文字列に変換
+        const tomorrowDateString = tomorrow.toISOString().split('T')[0];
+        
+        // 4. 明日の日付のダッシュボードに、importIdを付けてリダイレクト
+        router.push(`/dashboard/${tomorrowDateString}?importId=${importId}`);
       }
     });
   };
@@ -48,7 +61,7 @@ export default function ImportPage() {
       <h1 className="text-3xl font-bold">船舶予定 一括インポート</h1>
       <p className="text-muted-foreground">
         複数日（10日分など）の船舶予定テキストをまとめて貼り付けて、一度にデータベースへ登録します。<br />
-        船の情報は、空行で区切ってください。
+        船の情報は、「連絡先」の行で区切られます。
       </p>
 
       <div className="space-y-2">
@@ -58,7 +71,7 @@ export default function ImportPage() {
         <Textarea
           id="import-text"
           className="h-96 min-h-[300px] font-mono text-sm"
-          placeholder="SITC MOJI&#10;08/25 07:30 ～ 08/25 20:00&#10;全長 143.20 m&#10;...&#10;&#10;（空行）&#10;&#10;HANSA MAGDEBURG&#10;08/26 08:00 ～ 08/26 17:00&#10;..."
+          placeholder="22	DONGJIN FIDES&#10;入港予定	09/06 05:00&#10;09/06 06:00	～	09/06 16:30&#10;...&#10;連絡先	沖、橋本　663-3210&#10;23	◆　WAN HAI 289&#10;..."
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
         />
