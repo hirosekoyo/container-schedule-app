@@ -152,7 +152,7 @@ export async function deleteSchedule(scheduleId: number) {
 }
 
 /**
- * 7. 複数の船舶スケジュールを一括でDBに登録する
+ * 7. 複数の船舶スケジュールを一括でDBにUPSERT(Update or Insert)する
  * @param schedulesData 解析済みのスケジュールデータの配列
  */
 export async function createMultipleSchedules(
@@ -164,19 +164,24 @@ export async function createMultipleSchedules(
   
   const supabase = createSupabaseServerClient();
 
-  // schedulesテーブルに一括挿入
+  // --- 【ここからが修正箇所】 ---
+  // .insert() を .upsert() に変更
   const { data, error } = await supabase
     .from("schedules")
-    .insert(schedulesData)
-    .select(); // 挿入したデータを返す
+    .upsert(schedulesData, {
+      // onConflictで、どのカラムの組み合わせが重複しているかを判定するか指定
+      onConflict: 'schedule_date, ship_name',
+      // ignoreDuplicatesをfalseにすることで、重複した場合はUPDATEが実行される
+      ignoreDuplicates: false,
+    })
+    .select();
+  // --- 【ここまで修正】 ---
 
   if (error) {
-    console.error("Error creating multiple schedules:", error.message);
+    console.error("Error upserting multiple schedules:", error.message);
     return { error };
   }
 
-  // 登録が成功したら、関連する可能性のあるページのキャッシュを広範囲にクリア
   revalidatePath("/dashboard", "layout");
-
   return { data, error: null };
 }

@@ -42,7 +42,11 @@ const parseScheduleBlock = (
 
   try {
     const rawShipName = shipNameMatch[1].trim();
-    const ship_name = rawShipName.replace(/◆\s*/, '').trim();
+
+    // 1. まず行頭の数字とスペースを除去
+    const nameWithoutNumber = rawShipName.replace(/^\d+\s*/, '');
+    // 2. 次に「◆」とそれに続く空白を除去
+    const ship_name = nameWithoutNumber.replace(/◆\s*/, '').trim();
 
     const sternMainBit = parseInt(sternBitMatch[1], 10);
     if (sternMainBit < MIN_BIT_NUMBER) return [];
