@@ -1,14 +1,13 @@
 import { createHash } from 'crypto';
 import { ScheduleInsert } from "./supabase/actions";
 
-// DB登録用の型定義。新しいカラムもすべて含みます。
 type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
 
 const BIT_LENGTH_M = 30;
 const MIN_BIT_NUMBER = 33;
 
 const REGEX_MAP = {
-  shipName: /^(.*?)\s*$/m,
+  shipName: /^(.*?)(\r\n|\n|$)/,
   loa: /(?:全長|LOA)\s*:?\s*([\d.]+)\s*m/i,
   mooring: /綱位置.*\((\d+)\s*(?:-|～)\s*(\d+)\)/,
   sternBit: /船尾ビット\s*:?\s*(\d+)(?:([+-])(\d+)m)?/,
@@ -16,13 +15,6 @@ const REGEX_MAP = {
   dateTime: /(\d{2})\/(\d{2})\s(\d{2}):(\d{2})\s*～\s*(\d{2})\/(\d{2})\s(\d{2}):(\d{2})/,
 };
 
-/**
- * 1件のテキストブロックを解析し、滞在日数分のデータ配列を生成する
- * @param textBlock - 1件の船舶情報を含むテキスト
- * @param referenceYear - 基準となる年 (例: 2024)
- * @param importId - 今回のインポート処理を識別するユニークID
- * @returns 解析されたスケジュールデータの配列
- */
 const parseScheduleBlock = (
   textBlock: string,
   referenceYear: number,
@@ -47,7 +39,7 @@ const parseScheduleBlock = (
     const rawShipName = shipNameMatch[1].trim();
     const nameWithoutNumber = rawShipName.replace(/^\d+\s*/, '');
     const ship_name = nameWithoutNumber.replace(/◆\s*/, '').trim();
-
+    
     const sternMainBit = parseInt(sternBitMatch[1], 10);
     if (sternMainBit < MIN_BIT_NUMBER) return [];
     
@@ -64,6 +56,7 @@ const parseScheduleBlock = (
     const loa_m = parseFloat(loaMatch[1]);
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
+    // --- 【ここからが修正箇所】 ---
     const arrivalMonth = parseInt(dateTimeMatch[1], 10);
     const arrivalDay = parseInt(dateTimeMatch[2], 10);
     const arrivalHour = parseInt(dateTimeMatch[3], 10);
@@ -73,39 +66,51 @@ const parseScheduleBlock = (
     const departureHour = parseInt(dateTimeMatch[7], 10);
     const departureMinute = parseInt(dateTimeMatch[8], 10);
 
-    const arrivalDate = new Date(Date.UTC(referenceYear, arrivalMonth - 1, arrivalDay, arrivalHour, arrivalMinute));
-    const departureDate = new Date(Date.UTC(referenceYear, departureMonth - 1, departureDay, departureHour, departureMinute));
-    if (departureDate < arrivalDate) departureDate.setUTCFullYear(departureDate.getUTCFullYear() + 1);
+    // 1. Dateオブジェクトを、タイムゾーンを意識しない単純な日付・時刻の入れ物として使う
+    const arrivalDate = new Date(referenceYear, arrivalMonth - 1, arrivalDay, arrivalHour, arrivalMinute);
+    const departureDate = new Date(referenceYear, departureMonth - 1, departureDay, departureHour, departureMinute);
+    if (departureDate < arrivalDate) departureDate.setFullYear(departureDate.getFullYear() + 1);
 
-    // ハッシュ計算の元になるベースデータを作成
+    // 2. 'YYYY-MM-DD HH:mm:ss' 形式のタイムゾーンなし文字列を自前で生成する
+    const formatForDB = (date: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        const MM = pad(date.getMonth() + 1);
+        const dd = pad(date.getDate());
+        const HH = pad(date.getHours());
+        const mm = pad(date.getMinutes());
+        const ss = pad(date.getSeconds());
+        return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    };
+
     const baseScheduleData = {
       ship_name,
       berth_number: 6,
-      arrival_time: arrivalDate.toISOString(),
-      departure_time: departureDate.toISOString(),
+      arrival_time: formatForDB(arrivalDate), // 3. 生成した文字列をセット
+      departure_time: formatForDB(departureDate), // 3. 生成した文字列をセット
       arrival_side,
       bow_position_m: Math.round(bow_position_m_float),
       stern_position_m: Math.round(stern_position_m_float),
       planner_company: agentMatch ? agentMatch[1].trim() : undefined,
     };
+    // --- 【ここまで修正】 ---
 
-    // 重要なフィールドを結合してハッシュの元になる文字列を作成
     const hashSource = Object.values(baseScheduleData).join('|');
     const data_hash = createHash('sha256').update(hashSource).digest('hex');
 
     const schedules: ScheduleDataForDB[] = [];
-    let currentDate = new Date(arrivalDate);
-    currentDate.setUTCHours(0, 0, 0, 0);
+    let currentDate = new Date(arrivalDate.getFullYear(), arrivalDate.getMonth(), arrivalDate.getDate());
 
     while (currentDate <= departureDate) {
+      const pad = (n: number) => String(n).padStart(2, '0');
       schedules.push({
         ...baseScheduleData,
-        schedule_date: currentDate.toISOString().split('T')[0],
+        schedule_date: `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`,
         data_hash,
         last_import_id: importId,
-        update_flg: false, // 初期値は常にfalse
+        update_flg: false,
       });
-      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     return schedules;
 
@@ -115,13 +120,6 @@ const parseScheduleBlock = (
   }
 };
 
-/**
- * 複数件の船舶情報が含まれるテキスト全体を解析する
- * @param fullText - テキストデータ
- * @param referenceYear - 基準となる年
- * @param importId - 今回のインポート処理を識別するユニークID
- * @returns 解析されたスケジュールデータの配列
- */
 export const parseMultipleSchedules = (
   fullText: string,
   referenceYear: number,
@@ -129,9 +127,7 @@ export const parseMultipleSchedules = (
 ) => {
   const trimmedText = fullText.trim();
   if (!trimmedText) return [];
-
   const processedText = trimmedText.replace(/(^連絡先.*$)/gm, '$1\n__BLOCK_SEPARATOR__');
   const blocks = processedText.split('__BLOCK_SEPARATOR__').filter(block => block.trim().length > 0);
-
   return blocks.flatMap(block => parseScheduleBlock(block, referenceYear, importId));
 };

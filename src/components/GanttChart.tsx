@@ -15,25 +15,40 @@ const CHART_START_BIT = 33;
 const CHART_END_BIT = 64;
 const BIT_LENGTH_M = 30;
 
+// --- 【ここからが修正箇所】 ---
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
-  const arrival = new Date(schedule.arrival_time);
-  const departure = new Date(schedule.departure_time);
-  const baseDate = new Date(`${baseDateStr}T00:00:00Z`);
-  const isArrivalDay = arrival.getUTCFullYear() === baseDate.getUTCFullYear() && arrival.getUTCMonth() === baseDate.getUTCMonth() && arrival.getUTCDate() === baseDate.getUTCDate();
+  // DBの 'YYYY-MM-DD HH:mm:ss' をパース可能な 'YYYY-MM-DDTHH:mm:ss' に変換
+  const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
+  const departure = new Date(schedule.departure_time.replace(' ', 'T'));
+  const baseDate = new Date(baseDateStr);
+
+  // ローカルタイムゾーンの日付で比較
+  const isArrivalDay = arrival.getFullYear() === baseDate.getFullYear() &&
+                       arrival.getMonth() === baseDate.getMonth() &&
+                       arrival.getDate() === baseDate.getDate();
+
   const nextDay = new Date(baseDate);
-  nextDay.setUTCDate(baseDate.getUTCDate() + 1);
-  const isDepartureNextDay = departure.getUTCFullYear() === nextDay.getUTCFullYear() && departure.getUTCMonth() === nextDay.getUTCMonth() && departure.getUTCDate() === nextDay.getUTCDate();
-  const startHour = isArrivalDay ? (arrival.getUTCHours() + arrival.getUTCMinutes() / 60) : 0;
+  nextDay.setDate(baseDate.getDate() + 1);
+  const isDepartureNextDay = departure.getFullYear() === nextDay.getFullYear() &&
+                             departure.getMonth() === nextDay.getMonth() &&
+                             departure.getDate() === nextDay.getDate();
+
+  // ローカルタイムゾーンの時間で計算
+  const startHour = isArrivalDay ? (arrival.getHours() + arrival.getMinutes() / 60) : 0;
+  
   let endHour: number;
   if (isDepartureNextDay) {
-    endHour = 24 + (departure.getUTCHours() + departure.getUTCMinutes() / 60);
+    endHour = 24 + (departure.getHours() + departure.getMinutes() / 60);
   } else if (departure > nextDay) {
     endHour = CHART_END_HOUR;
   } else {
-    endHour = departure.getUTCHours() + departure.getUTCMinutes() / 60;
+    endHour = departure.getHours() + departure.getMinutes() / 60;
   }
+
   return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
 };
+// --- 【ここまで修正】 ---
+
 
 const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId }) => {
   const timeLabels = Array.from({ length: TOTAL_CHART_HOURS / 2 + 1 }, (_, i) => {
@@ -74,37 +89,20 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
         {bitLabels.map((label, i) => (
           <div key={`bit-label-${i}`} className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>{label}</div>
         ))}
-       {/* クレーン止め位置の描画 */}
-        {graphAreaWidth > 0 && craneStops.map((stop) => { // dynamicBitWidthが計算されてから描画
+        {graphAreaWidth > 0 && craneStops.map((stop) => {
             const leftPosition = (stop.position - CHART_START_BIT) * dynamicBitWidth;
-            
-            // 1. ボックスの幅を動的に計算 (1ビット分の幅と同じにする)
             const boxWidth = dynamicBitWidth;
-            // 2. 連続するボックス(2と3, 6と7)を区別するためのIDを追加
-            const boxKey = `crane-${stop.id}`;
-
             return (
               <div
-                key={boxKey}
+                key={`crane-${stop.id}`}
                 className="absolute flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700"
                 style={{
-                  left: leftPosition,
-                  // 3. transformで中央揃え (x座標)
-                  transform: 'translateX(-50%)', 
+                  left: `calc(${leftPosition}px - ${boxWidth / 2}px)`,
                   bottom: '2.5rem',
-                  // 4. 計算した動的な幅を適用
                   width: `${boxWidth}px`,
-                  height: '1.5rem', // 高さは固定 (h-6)
+                  height: '1.5rem',
                 }}
               >
-                {/* 
-                  5. グループ化の処理
-                  IDが2,3または6,7の場合、border-right/leftを調整して
-                  隣接するボックス間の線を1本に見せる
-                */}
-                {stop.id === 2 && <div className="absolute right-0 top-0 h-full w-px bg-gray-500" />}
-                {stop.id === 7 && <div className="absolute left-0 top-0 h-full w-px bg-gray-500" />}
-
                 {stop.text}
               </div>
             );
@@ -123,29 +121,17 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
         {graphAreaWidth > 0 && schedules.map((schedule) => {
           const { startHour, endHour } = calculateBarRange(schedule, baseDate);
           if (endHour <= startHour) return null;
-
           const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
           const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
-          
-          // --- 【修正点2】描画範囲の制限 ---
           const bow_m = Number(schedule.bow_position_m);
           const stern_m = Number(schedule.stern_position_m);
           const chartStart_m = CHART_START_BIT * BIT_LENGTH_M;
-
-          // 船の左端と右端の位置を計算
           let left_m = Math.min(bow_m, stern_m);
           let right_m = Math.max(bow_m, stern_m);
-          
-          // もし船の左端がグラフの開始位置(33bit)より小さい場合
-          if (left_m < chartStart_m) {
-            left_m = chartStart_m; // 左端を強制的に33bitの位置にする
-          }
+          if (left_m < chartStart_m) { left_m = chartStart_m; }
           const width_m = right_m - left_m;
-          // --- ここまで ---
-
           const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * dynamicBitWidth;
           const width = (width_m / BIT_LENGTH_M) * dynamicBitWidth;
-
           let blockClassName = 'bg-sky-100 text-sky-800';
           if (latestImportId) {
             if (schedule.last_import_id !== latestImportId) {

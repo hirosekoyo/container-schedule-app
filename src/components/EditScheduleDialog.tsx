@@ -10,7 +10,6 @@ import { ScheduleWithOperations, OperationInsert, ScheduleInsert, updateSchedule
 import { useRouter } from 'next/navigation';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
-import { format, parseISO } from 'date-fns';
 
 interface EditScheduleDialogProps {
   schedule: ScheduleWithOperations | null;
@@ -18,6 +17,7 @@ interface EditScheduleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// ヘルパー関数 (変更なし)
 const bitNotationToMeters = (notation: string): number | null => {
   const match = notation.match(/^(\d+)([+-])(\d+)$/);
   if (!match) return null;
@@ -27,7 +27,6 @@ const bitNotationToMeters = (notation: string): number | null => {
   if (sign === '+') meters += remainder; else if (sign === '-') meters -= remainder;
   return meters;
 };
-
 const metersToBitNotation = (meters: number | null | undefined): string => {
   if (meters === null || meters === undefined || isNaN(meters)) return '';
   const BIT_LENGTH_M = 30;
@@ -42,16 +41,14 @@ const metersToBitNotation = (meters: number | null | undefined): string => {
   return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
 };
 
-const toDatetimeLocalString = (isoString: string | null | undefined): string => {
-  if (!isoString) return '';
-  try {
-    const date = parseISO(isoString);
-    return format(date, "yyyy-MM-dd'T'HH:mm");
-  } catch (error) {
-    console.error("Invalid date format:", isoString);
-    return '';
-  }
+// --- 【ここからが修正箇所】 ---
+// DBの 'YYYY-MM-DD HH:mm:ss' を input用の 'YYYY-MM-DDTHH:mm' に変換
+const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string => {
+  if (!dbTimestamp) return '';
+  // スペースを'T'に置換し、秒(:ss)を削除
+  return dbTimestamp.replace(' ', 'T').substring(0, 16);
 };
+// --- 【ここまで修正】 ---
 
 type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company'> & {
   arrival_time_local: string;
@@ -61,11 +58,9 @@ type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'pla
 };
 type OperationFormData = Omit<OperationInsert, 'id' | 'created_at' | 'schedule_id'> & { start_time_local?: string };
 
-
 export function EditScheduleDialog({ schedule, open, onOpenChange }: EditScheduleDialogProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
   const [scheduleData, setScheduleData] = useState<ScheduleFormData | null>(null);
   const [operationsData, setOperationsData] = useState<OperationFormData[]>([]);
 
@@ -119,17 +114,12 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
     if (bow_m === null || stern_m === null) {
       alert('おもて、またはともの位置の形式が正しくありません (例: 33+15)'); return;
     }
-
-    // --- 【ここからが修正箇所】 ---
     if (!scheduleData.arrival_time_local || !scheduleData.departure_time_local) {
-      alert('着岸時間と離岸時間は必須です。');
-      return;
+      alert('着岸時間と離岸時間は必須です。'); return;
     }
 
-    const arrivalTimeISO = new Date(scheduleData.arrival_time_local).toISOString();
-    const departureTimeISO = new Date(scheduleData.departure_time_local).toISOString();
-    // --- 【ここまで修正】 ---
-
+    // --- 【ここからが修正箇所】 ---
+    // DB保存用のデータを作成。タイムゾーン変換は一切行わない。
     const dataToSave = {
       ship_name: scheduleData.ship_name,
       planner_company: scheduleData.planner_company,
@@ -137,17 +127,18 @@ export function EditScheduleDialog({ schedule, open, onOpenChange }: EditSchedul
       arrival_side: scheduleData.arrival_side,
       bow_position_m: bow_m,
       stern_position_m: stern_m,
-      arrival_time: arrivalTimeISO, // nullにならない値をセット
-      departure_time: departureTimeISO, // nullにならない値をセット
+      arrival_time: scheduleData.arrival_time_local,
+      departure_time: scheduleData.departure_time_local,
     };
     
     const opsToSave = operationsData.map(op => ({
-      start_time: op.start_time_local ? new Date(op.start_time_local).toISOString() : null,
+      start_time: op.start_time_local || null,
       crane_names: op.crane_names,
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
       remarks: op.remarks,
     }));
+    // --- 【ここまで修正】 ---
     
     startTransition(async () => {
       const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);

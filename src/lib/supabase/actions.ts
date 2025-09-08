@@ -95,12 +95,51 @@ export async function getLatestImportId(date: string): Promise<string | null> {
 }
 
 /**
- * 6. 指定IDのスケジュールを削除する
+ * 指定IDのスケジュールを削除する
+ * ON DELETE CASCADE制約により、関連するcargo_operationsも自動的に削除される
  */
 export async function deleteSchedule(scheduleId: number) {
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase.from("schedules").delete().eq("id", scheduleId);
-  if (error) { console.error("Error deleting schedule:", error.message); return { error }; }
+  const { error } = await supabase
+    .from("schedules")
+    .delete()
+    .eq("id", scheduleId);
+
+  if (error) {
+    console.error("Error deleting schedule:", error.message);
+    return { error };
+  }
+
+  // 変更を反映させるため、ダッシュボード全体のキャッシュをクリア
+  revalidatePath("/dashboard", "layout");
+  return { error: null };
+}
+
+/**
+ * 7. 既存のスケジュールと関連する荷役作業をトランザクションで更新する
+ * @param scheduleId 更新対象のスケジュールID
+ * @param scheduleData 更新後のスケジュールデータ
+ * @param operationsData 更新後の荷役作業データの配列
+ */
+export async function updateScheduleWithOperations(
+  scheduleId: number,
+  scheduleData: Omit<ScheduleInsert, "id" | "created_at" | "schedule_date" | "last_import_id" | "data_hash" | "update_flg" >,
+  operationsData: Omit<OperationInsert, "id" | "created_at" | "schedule_id">[]
+) {
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.rpc("update_schedule_with_operations", {
+    p_schedule_id: scheduleId,
+    schedule_data: scheduleData,
+    operations_data: operationsData,
+  });
+
+  if (error) {
+    console.error("Error updating schedule with operations:", error.message);
+    return { error };
+  }
+  
+  // このスケジュールが表示されている可能性のある日付のキャッシュをクリア
+  // schedule_date も更新される可能性があるため、広範囲にクリア
   revalidatePath("/dashboard", "layout");
   return { error: null };
 }
