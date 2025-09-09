@@ -7,6 +7,7 @@ interface GanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
   latestImportId: string | null;
+  onScheduleClick: (schedule: ScheduleWithOperations) => void;
 }
 const CHART_START_HOUR = 0;
 const CHART_END_HOUR = 26;
@@ -15,27 +16,15 @@ const CHART_START_BIT = 33;
 const CHART_END_BIT = 64;
 const BIT_LENGTH_M = 30;
 
-// --- 【ここからが修正箇所】 ---
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
-  // DBの 'YYYY-MM-DD HH:mm:ss' をパース可能な 'YYYY-MM-DDTHH:mm:ss' に変換
   const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
   const departure = new Date(schedule.departure_time.replace(' ', 'T'));
   const baseDate = new Date(baseDateStr);
-
-  // ローカルタイムゾーンの日付で比較
-  const isArrivalDay = arrival.getFullYear() === baseDate.getFullYear() &&
-                       arrival.getMonth() === baseDate.getMonth() &&
-                       arrival.getDate() === baseDate.getDate();
-
+  const isArrivalDay = arrival.getFullYear() === baseDate.getFullYear() && arrival.getMonth() === baseDate.getMonth() && arrival.getDate() === baseDate.getDate();
   const nextDay = new Date(baseDate);
   nextDay.setDate(baseDate.getDate() + 1);
-  const isDepartureNextDay = departure.getFullYear() === nextDay.getFullYear() &&
-                             departure.getMonth() === nextDay.getMonth() &&
-                             departure.getDate() === nextDay.getDate();
-
-  // ローカルタイムゾーンの時間で計算
+  const isDepartureNextDay = departure.getFullYear() === nextDay.getFullYear() && departure.getMonth() === nextDay.getMonth() && departure.getDate() === nextDay.getDate();
   const startHour = isArrivalDay ? (arrival.getHours() + arrival.getMinutes() / 60) : 0;
-  
   let endHour: number;
   if (isDepartureNextDay) {
     endHour = 24 + (departure.getHours() + departure.getMinutes() / 60);
@@ -44,20 +33,19 @@ const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string
   } else {
     endHour = departure.getHours() + departure.getMinutes() / 60;
   }
-
   return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
 };
+
+// --- 【ここからが修正箇所】 ---
+// propsの分割代入に onScheduleClick を追加
+const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId, onScheduleClick }) => {
 // --- 【ここまで修正】 ---
-
-
-const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId }) => {
   const timeLabels = Array.from({ length: TOTAL_CHART_HOURS / 2 + 1 }, (_, i) => {
     const hour = CHART_START_HOUR + i * 2;
     if (hour >= 26) return hour - 24;
     return hour;
   });
   const bitLabels = Array.from({ length: CHART_END_BIT - CHART_START_BIT + 1 }, (_, i) => CHART_START_BIT + i);
-  
   const graphAreaRef = useRef<HTMLDivElement>(null);
   const [graphAreaWidth, setGraphAreaWidth] = useState(0);
 
@@ -86,32 +74,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
     <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '2rem 1fr' }}>
       <div></div>
       <div className="relative">
-        {bitLabels.map((label, i) => (
-          <div key={`bit-label-${i}`} className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>{label}</div>
-        ))}
+        {bitLabels.map((label, i) => (<div key={`bit-label-${i}`} className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>{label}</div>))}
         {graphAreaWidth > 0 && craneStops.map((stop) => {
             const leftPosition = (stop.position - CHART_START_BIT) * dynamicBitWidth;
             const boxWidth = dynamicBitWidth;
-            return (
-              <div
-                key={`crane-${stop.id}`}
-                className="absolute flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700"
-                style={{
-                  left: `calc(${leftPosition}px - ${boxWidth / 2}px)`,
-                  bottom: '2.5rem',
-                  width: `${boxWidth}px`,
-                  height: '1.5rem',
-                }}
-              >
-                {stop.text}
-              </div>
-            );
+            return (<div key={`crane-${stop.id}`} className="absolute flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700" style={{ left: `calc(${leftPosition}px - ${boxWidth / 2}px)`, bottom: '2.5rem', width: `${boxWidth}px`, height: '1.5rem', }}>{stop.text}</div>);
         })}
       </div>
       <div className="relative">
-        {timeLabels.map((label, i) => (
-          <div key={`time-label-${i}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
-        ))}
+        {timeLabels.map((label, i) => (<div key={`time-label-${i}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>))}
       </div>
       <div ref={graphAreaRef} className="relative h-full w-full">
         <div className="absolute inset-0">
@@ -134,14 +105,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
           const width = (width_m / BIT_LENGTH_M) * dynamicBitWidth;
           let blockClassName = 'bg-sky-100 text-sky-800';
           if (latestImportId) {
-            if (schedule.last_import_id !== latestImportId) {
-              blockClassName = 'bg-red-200/80 text-red-900 ring-1 ring-red-500';
-            } else if (schedule.update_flg) {
-              blockClassName = 'bg-yellow-200/80 text-yellow-900 ring-1 ring-yellow-500';
-            }
+            if (schedule.last_import_id !== latestImportId) { blockClassName = 'bg-red-200/80 text-red-900 ring-1 ring-red-500'; } 
+            else if (schedule.update_flg) { blockClassName = 'bg-yellow-200/80 text-yellow-900 ring-1 ring-yellow-500'; }
           }
           return (
-            <div key={`${schedule.id}-${schedule.schedule_date}`} className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors ${blockClassName}`} style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}>
+            <div key={`${schedule.id}-${schedule.schedule_date}`} 
+                 className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors cursor-pointer hover:ring-2 hover:ring-blue-500 ${blockClassName}`} 
+                 style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}
+                 onClick={() => onScheduleClick(schedule)}>
               <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm">
                 {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="truncate">{schedule.ship_name}</span></> ) : 
                  schedule.arrival_side === '右舷' ? ( <><span className="truncate">{schedule.ship_name}</span><span>→</span></> ) : 

@@ -126,7 +126,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     setOperationsData(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!scheduleData) return;
     const bow_m = bitNotationToMeters(scheduleData.bow_position_notation);
@@ -157,25 +157,31 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
     if (schedule) { // --- 編集モード ---
       const dataToSave = { ...dataForHash, data_hash: newDataHash, last_import_id: latestImportId };
-      startTransition(async () => {
+    startTransition(async () => {
+      let result;
+      if (schedule) { // 編集モード
         // @ts-ignore
-        const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
-        if (!error) { alert("予定が更新されました。"); onOpenChange(false); router.refresh(); }
-        else { alert(`更新中にエラーが発生しました: ${error.message}`); }
-      });
-    } else { // --- 新規作成モード ---
-      const dataToSave = {
-        ...dataForHash,
-        schedule_date: scheduleDateForNew,
-        data_hash: newDataHash,
-        last_import_id: latestImportId,
-        update_flg: false,
-      };
-      startTransition(async () => {
-        const { error } = await createScheduleWithOperations(dataToSave, opsToSave);
-        if (!error) { alert("新しい予定が作成されました。"); onOpenChange(false); router.refresh(); }
-        else { alert(`作成中にエラーが発生しました: ${error.message}`); }
-      });
+        result = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
+      } else { // 新規作成モード
+        // @ts-ignore
+        result = await createScheduleWithOperations(dataToSave, opsToSave);
+      }
+
+      if (!result.error) {
+        alert(schedule ? "予定が更新されました。" : "新しい予定が作成されました。");
+        onOpenChange(false);
+        
+        // --- 【ここが修正箇所】 ---
+        // router.refresh() はサーバーデータの再取得と再レンダリングをトリガーする
+        // これにより、親コンポーネント(DashboardClient)のuseEffectが再実行されるわけではないが、
+        // サーバーコンポーネント(page.tsx)が再描画され、最新のデータがDashboardClientに渡される
+        router.refresh();
+        // --- 【ここまで】 ---
+
+      } else {
+        alert(`エラーが発生しました: ${result.error.message}`);
+      }
+    });
     }
   };
 

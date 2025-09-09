@@ -3,15 +3,14 @@
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useTransition } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EditScheduleDialog } from './EditScheduleDialog';
 import { Button } from './ui/button';
-import { Trash2, PlusCircle } from 'lucide-react'; // PlusCircleをインポート
+import { Trash2, PlusCircle } from 'lucide-react';
 import { deleteSchedule } from '@/lib/supabase/actions';
-import { useRouter } from 'next/navigation';
 
 interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
   latestImportId: string | null;
+  onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
 }
 
 const metersToBitNotation = (meters: number | null | undefined): string => {
@@ -27,7 +26,6 @@ const metersToBitNotation = (meters: number | null | undefined): string => {
   const absRemainder = Math.abs(remainderMeters);
   return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
 };
-
 const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: string | null }> = ({
   scheduleDateStr,
   eventTimeStr,
@@ -57,40 +55,24 @@ const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: stri
   return <span>{timeString}</span>;
 };
 
-const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
+const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick }) => {
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
-  // handleRowClickの型を修正
-  const handleRowClick = (schedule: ScheduleWithOperations | null) => {
-    setSelectedSchedule(schedule);
-    setIsModalOpen(true);
-  };
-
-    const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
     e.stopPropagation();
-    if (window.confirm(`「${shipName}」の予定を削除しますか？この操作は元に戻せません。`)) {
+    if (window.confirm(`「${shipName}」の予定を削除しますか？`)) {
       startTransition(async () => {
         const { error } = await deleteSchedule(scheduleId);
-        if (error) {
-          alert(`削除中にエラーが発生しました: ${error.message}`);
-        } else {
-          alert('予定が削除されました。');
-        }
+        if (error) { alert(`削除中にエラーが発生しました: ${error.message}`); } 
+        else { alert('予定が削除されました。'); }
       });
     }
   };
 
-  // この日の日付を取得 (新規作成時に使用)
-  const currentDate = schedules[0]?.schedule_date || new Date().toISOString().split('T')[0];
-
   return (
-    <>
-      <div className="w-full overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader className="bg-gray-50">
+    <div className="w-full overflow-hidden rounded-lg border">
+      <Table>
+        <TableHeader className="bg-gray-50">
             <TableRow>
               <TableHead className="w-[80px]">岸壁</TableHead>
               <TableHead className="min-w-[200px]">船名</TableHead>
@@ -108,9 +90,9 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               <TableHead className="min-w-[200px]">備考</TableHead>
               <TableHead className="w-[80px]">操作</TableHead>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {schedules.map((schedule) => {
+        </TableHeader>
+        <TableBody>
+          {schedules.map((schedule) => {
               const operations = schedule.cargo_operations || [];
               const startTimes = operations.map(op => 
                 op.start_time 
@@ -121,17 +103,17 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               const containerCounts = operations.map(op => op.container_count ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
               const remarks = operations.map(op => op.remarks ?? '').join('\n');
-              let rowClassName = '';
-              if (latestImportId) {
-                if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
-                else if (schedule.update_flg) rowClassName = 'bg-yellow-100/60';
-              }
+            let rowClassName = '';
+            if (latestImportId) {
+              if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
+              else if (schedule.update_flg) rowClassName = 'bg-yellow-100/60';
+            }
               
-              return (
-                <TableRow 
-                  key={`${schedule.id}-${schedule.schedule_date}`} 
-                  className={`${rowClassName} cursor-pointer hover:bg-gray-100/80 transition-colors`}
-                  onClick={() => handleRowClick(schedule)}
+            return (
+              <TableRow 
+                key={`${schedule.id}-${schedule.schedule_date}`} 
+                className={`${rowClassName} cursor-pointer hover:bg-gray-100/80 transition-colors`}
+                  onClick={() => onScheduleClick(schedule)}
                 >
                   <TableCell>{schedule.berth_number}岸</TableCell>
                   <TableCell className="font-medium">{schedule.ship_name}</TableCell>
@@ -158,34 +140,24 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
-                </TableRow>
-              );
-            })}
-            
-            <TableRow 
-              className="cursor-pointer hover:bg-green-50"
-              onClick={() => handleRowClick(null)}
-            >
-              <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
-                <div className="flex items-center justify-center gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  <span>この日に新しい予定を追加</span>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      
-      <EditScheduleDialog
-        schedule={selectedSchedule}
-        scheduleDateForNew={currentDate}
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        latestImportId={latestImportId}
-      />
-    </>
+              </TableRow>
+            );
+          })}
+          <TableRow 
+            className="cursor-pointer hover:bg-green-50"
+            onClick={() => onScheduleClick(null)}
+          >
+            <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
+              <div className="flex items-center justify-center gap-2">
+                <PlusCircle className="h-4 w-4" />
+                <span>この日に新しい予定を追加</span>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
-export default ScheduleTable;
+export default ScheduleTable;　
