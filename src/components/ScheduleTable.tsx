@@ -26,17 +26,18 @@ const metersToBitNotation = (meters: number | null | undefined): string => {
   const absRemainder = Math.abs(remainderMeters);
   return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
 };
-const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: string | null }> = ({
+/**
+ * 着岸・離岸時間用の2段表示コンポーネント
+ */
+const DateTimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: string | null }> = ({
   scheduleDateStr,
   eventTimeStr,
 }) => {
-  if (!scheduleDateStr || !eventTimeStr) return null;
+  if (!scheduleDateStr || !eventTimeStr) return <span>-</span>;
 
-  // DBの 'YYYY-MM-DD HH:mm:ss' をパース可能な 'YYYY-MM-DDTHH:mm:ss' に変換
   const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
   const scheduleDateObj = new Date(scheduleDateStr);
 
-  // ローカルタイムゾーンの日付で比較
   const eventDay = eventDateObj.getDate();
   const scheduleDay = scheduleDateObj.getDate();
 
@@ -52,6 +53,36 @@ const TimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: stri
       </span>
     );
   }
+  return <span>{timeString}</span>;
+};
+
+/**
+ * 荷役開始時間用の1段表示コンポーネント
+ */
+const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: string | null }> = ({
+  scheduleDateStr,
+  eventTimeStr,
+}) => {
+  if (!scheduleDateStr || !eventTimeStr) return <span>-</span>;
+
+  const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
+  const scheduleDateObj = new Date(scheduleDateStr);
+
+  const eventDay = eventDateObj.getDate();
+  const scheduleDay = scheduleDateObj.getDate();
+
+  const timeString = eventDateObj.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  
+  if (eventDay !== scheduleDay) {
+    const dateString = `${String(eventDateObj.getDate()).padStart(2, '0')}日`;
+    return (
+      <span>
+        <span className="text-xs text-muted-foreground">{dateString}</span>
+        <span> {timeString}</span>
+      </span>
+    );
+  }
+  
   return <span>{timeString}</span>;
 };
 
@@ -94,35 +125,36 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
         <TableBody>
           {schedules.map((schedule) => {
               const operations = schedule.cargo_operations || [];
-              const startTimes = operations.map(op => 
-                op.start_time 
-                  ? new Date(op.start_time.replace(' ', 'T')).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-                  : '-'
-              ).join('\n');
               const craneNames = operations.map(op => op.crane_names ?? '-').join('\n');
               const containerCounts = operations.map(op => op.container_count ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
               const remarks = operations.map(op => op.remarks ?? '').join('\n');
-            let rowClassName = '';
-            if (latestImportId) {
-              if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
-              else if (schedule.update_flg) rowClassName = 'bg-yellow-100/60';
-            }
+              let rowClassName = '';
+              if (latestImportId) {
+                if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
+                else if (schedule.update_flg) rowClassName = 'bg-yellow-100/60';
+              }
               
             return (
               <TableRow 
                 key={`${schedule.id}-${schedule.schedule_date}`} 
                 className={`${rowClassName} cursor-pointer hover:bg-gray-100/80 transition-colors`}
-                  onClick={() => onScheduleClick(schedule)}
-                >
+                onClick={() => onScheduleClick(schedule)}
+              >
                   <TableCell>{schedule.berth_number}岸</TableCell>
                   <TableCell className="font-medium">{schedule.ship_name}</TableCell>
-                  <TableCell><TimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
-                  <TableCell><TimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
+                  <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
+                  <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
                   <TableCell>入</TableCell>
                   <TableCell>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
                   <TableCell>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
-                  <TableCell className="whitespace-pre-line">{startTimes}</TableCell>
+                  <TableCell className="whitespace-pre-line">
+                    {operations.length > 0 ? (
+                      operations.map(op => (
+                        <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
+                      )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>{operations.length > 0 ? operations.length : '-'}</TableCell>
                   <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
@@ -160,4 +192,4 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
   );
 };
 
-export default ScheduleTable;　
+export default ScheduleTable;
