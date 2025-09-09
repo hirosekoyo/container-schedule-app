@@ -1,13 +1,11 @@
 "use client";
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
-import React, { useState, useTransition } from 'react'; // import文を修正
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table';
+import React, { useState, useTransition } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EditScheduleDialog } from './EditScheduleDialog';
 import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, PlusCircle } from 'lucide-react'; // PlusCircleをインポート
 import { deleteSchedule } from '@/lib/supabase/actions';
 import { useRouter } from 'next/navigation';
 
@@ -65,12 +63,13 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const handleRowClick = (schedule: ScheduleWithOperations) => {
+  // handleRowClickの型を修正
+  const handleRowClick = (schedule: ScheduleWithOperations | null) => {
     setSelectedSchedule(schedule);
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
+    const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
     e.stopPropagation();
     if (window.confirm(`「${shipName}」の予定を削除しますか？この操作は元に戻せません。`)) {
       startTransition(async () => {
@@ -83,6 +82,9 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
       });
     }
   };
+
+  // この日の日付を取得 (新規作成時に使用)
+  const currentDate = schedules[0]?.schedule_date || new Date().toISOString().split('T')[0];
 
   return (
     <>
@@ -159,14 +161,28 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 </TableRow>
               );
             })}
+            
+            <TableRow 
+              className="cursor-pointer hover:bg-green-50"
+              onClick={() => handleRowClick(null)}
+            >
+              <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
+                <div className="flex items-center justify-center gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  <span>この日に新しい予定を追加</span>
+                </div>
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </div>
       
       <EditScheduleDialog
         schedule={selectedSchedule}
+        scheduleDateForNew={currentDate}
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+        latestImportId={latestImportId}
       />
     </>
   );

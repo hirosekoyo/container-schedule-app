@@ -95,6 +95,28 @@ export async function getLatestImportId(date: string): Promise<string | null> {
 }
 
 /**
+ * 新規スケジュールと関連する荷役作業をトランザクションで作成する
+ */
+export async function createScheduleWithOperations(
+  scheduleData: Omit<ScheduleInsert, "id" | "created_at">,
+  operationsData: Omit<OperationInsert, "id" | "created_at" | "schedule_id">[]
+) {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("create_schedule_with_operations", {
+    schedule_data: scheduleData,
+    operations_data: operationsData,
+  });
+
+  if (error) {
+    console.error("Error creating schedule:", error.message);
+    return { data: null, error };
+  }
+  
+  revalidatePath("/dashboard", "layout");
+  return { data, error: null };
+}
+
+/**
  * 指定IDのスケジュールを削除する
  * ON DELETE CASCADE制約により、関連するcargo_operationsも自動的に削除される
  */
