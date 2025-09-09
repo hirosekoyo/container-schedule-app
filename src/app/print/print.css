@@ -1,0 +1,44 @@
+/* A4用紙のサイズを定義 */
+@page {
+  size: A4;
+  margin: 10mm; /* 用紙の余白 */
+}
+
+/* 印刷時のみ適用されるスタイル */
+@media print {
+  /* ページのスクロールバーなどを非表示に */
+  body {
+    -webkit-print-color-adjust: exact; /* 背景色や色が正しく印刷されるようにする */
+    print-color-adjust: exact;
+  }
+
+  /* 印刷プレビューで余白が二重にかからないように調整 */
+  .print-container {
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+/* 画面表示用のA4プレビューコンテナ */
+.print-container {
+  width: 210mm;
+  height: 297mm;
+  padding: 10mm;
+  margin: 0 auto; /* 画面中央に表示 */
+  border: 1px solid #ccc;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 印刷時のテーブルの文字サイズを小さくする */
+@media print {
+  .print-table {
+    font-size: 8pt; /* ポイント指定 */
+  }
+  .print-table th, .print-table td {
+    padding: 2px 4px; /* セルの余白を詰める */
+  }
+}

@@ -11,6 +11,7 @@ interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
   latestImportId: string | null;
   onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
+  isPrintView?: boolean; // 印刷表示かどうかのフラグ
 }
 
 const metersToBitNotation = (meters: number | null | undefined): string => {
@@ -86,7 +87,7 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
   return <span>{timeString}</span>;
 };
 
-const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick }) => {
+const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick, isPrintView = false }) => {
   const [isPending, startTransition] = useTransition();
 
   const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
@@ -101,7 +102,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border">
+    <div className={`w-full h-full overflow-hidden rounded-lg border ${isPrintView ? 'print-table' : ''}`}>
       <Table>
         <TableHeader className="bg-gray-50">
             <TableRow>
@@ -119,7 +120,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               <TableHead>GC運転</TableHead>
               <TableHead>プランナ</TableHead>
               <TableHead className="min-w-[200px]">備考</TableHead>
-              <TableHead className="w-[80px]">操作</TableHead>
+              {/* 3. isPrintViewがfalseの場合のみ「操作」列を表示 */}
+              {!isPrintView && <TableHead className="w-[80px]">操作</TableHead>}
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -164,7 +166,9 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell>{schedule.planner_company || '-'}</TableCell>
                   <TableCell className="whitespace-pre-line">{remarks}</TableCell>
-                  <TableCell>
+                  {/* 4. isPrintViewがfalseの場合のみ「操作」セルを表示 */}
+                  {!isPrintView && (
+                    <TableCell>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -172,23 +176,27 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                       disabled={isPending}
                       className="hover:bg-red-100"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
               </TableRow>
             );
           })}
-          <TableRow 
-            className="cursor-pointer hover:bg-green-50"
-            onClick={() => onScheduleClick(null)}
-          >
-            <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
-              <div className="flex items-center justify-center gap-2">
-                <PlusCircle className="h-4 w-4" />
-                <span>新規追加</span>
-              </div>
-            </TableCell>
-          </TableRow>
+          {/* 5. isPrintViewがfalseの場合のみ「新規作成行」を表示 */}
+          {!isPrintView && (
+            <TableRow 
+              className="cursor-pointer hover:bg-green-50"
+              onClick={() => onScheduleClick(null)}
+            >
+              <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
+                <div className="flex items-center justify-center gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  <span>この日に新しい予定を追加</span>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>

@@ -5,14 +5,14 @@ import DashboardHeader from '@/components/DashboardHeader';
 import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
 import { DateNavigator } from '@/components/DateNavigator';
-import { ScheduleWithOperations } from '@/lib/supabase/actions';
+import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
+import { Printer } from 'lucide-react'; // Printerアイコンをインポート
 
-// 親(サーバーコンポーネント)から渡されるpropsの型定義
 interface DashboardClientProps {
-  initialReport: any;
+  initialReport: DailyReport | null;
   initialSchedules: ScheduleWithOperations[];
   initialLatestImportId: string | null;
   date: string;
@@ -26,7 +26,6 @@ export function DashboardClient({
   date,
   currentImportId,
 }: DashboardClientProps) {
-  // stateの管理とモーダルのロジックはすべてここに集約
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
 
@@ -41,6 +40,13 @@ export function DashboardClient({
         <h1 className="text-3xl font-bold">コンテナ船荷役予定管理</h1>
         <div className="flex items-center gap-4">
           <DateNavigator currentDate={date} importId={currentImportId} />
+          <Button 
+            variant="outline" 
+            onClick={() => window.open(`/print/${date}`, '_blank')}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            印刷
+          </Button>
           <Button asChild><Link href="/dashboard/import">データインポート</Link></Button>
         </div>
       </div>
@@ -55,6 +61,7 @@ export function DashboardClient({
             baseDate={date}
             latestImportId={initialLatestImportId}
             onScheduleClick={handleScheduleClick}
+            // isPrintViewは渡さない（デフォルトのfalseが使われる）
           />
         </div>
       </div>
@@ -65,6 +72,7 @@ export function DashboardClient({
           schedules={initialSchedules}
           latestImportId={initialLatestImportId}
           onScheduleClick={handleScheduleClick}
+          // isPrintViewは渡さない（デフォルトのfalseが使われる）
         />
       </div>
       
