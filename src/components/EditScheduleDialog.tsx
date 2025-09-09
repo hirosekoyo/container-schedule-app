@@ -12,6 +12,8 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { createHash } from 'crypto';
 import { DateTimePicker } from './DateTimePicker';
+import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants'; 
+import { Combobox } from './ui/Combobox';
 
 interface EditScheduleDialogProps {
   schedule: ScheduleWithOperations | null;
@@ -224,9 +226,25 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
             {operationsData.map((op, index) => (
               <div key={index} className="grid grid-cols-12 gap-2 items-center">
                 <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
-                <div className="col-span-2"><Label>使用GC</Label><Input name="crane_names" value={op.crane_names || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
+                <div className="col-span-2">
+                  <Label>使用GC</Label>
+                  <Combobox
+                    options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))}
+                    value={op.crane_names || ''}
+                    onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)}
+                    placeholder="GCを選択..."
+                  />
+                </div>
                 <div className="col-span-1"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
-                <div className="col-span-2"><Label>GC運転</Label><Input name="stevedore_company" value={op.stevedore_company || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
+                  <div className="col-span-2">
+                  <Label>GC運転</Label>
+                  <Combobox
+                    options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))}
+                    value={op.stevedore_company || ''}
+                    onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)}
+                    placeholder="会社を選択..."
+                  />
+                </div>
                 <div className="col-span-2"><Label>備考</Label><Textarea name="remarks" value={op.remarks || ''} onChange={(e) => handleOperationChange(index, e)} className="h-10" /></div>
                 {/* --- 【ここからが修正箇所】 --- */}
                 <div className="col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>

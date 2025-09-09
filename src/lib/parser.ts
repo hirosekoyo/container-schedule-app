@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { ScheduleInsert } from "./supabase/actions";
+import { PLANNER_TO_STEVEDORE_MAP } from './constants';
 
 type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
 
@@ -83,6 +84,9 @@ const parseScheduleBlock = (
         return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
     };
 
+    const agentName = agentMatch ? agentMatch[1].trim() : undefined;
+    const planner_company = agentName ? (PLANNER_TO_STEVEDORE_MAP[agentName] || agentName) : undefined;
+
     const baseScheduleData = {
       ship_name,
       berth_number: 6,
@@ -91,7 +95,7 @@ const parseScheduleBlock = (
       arrival_side,
       bow_position_m: Math.round(bow_position_m_float),
       stern_position_m: Math.round(stern_position_m_float),
-      planner_company: agentMatch ? agentMatch[1].trim() : undefined,
+      planner_company: planner_company,
     };
     // --- 【ここまで修正】 ---
 
