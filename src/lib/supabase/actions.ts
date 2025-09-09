@@ -165,3 +165,42 @@ export async function updateScheduleWithOperations(
   revalidatePath("/dashboard", "layout");
   return { error: null };
 }
+
+/**
+ * データベースのスケジュール関連データをリセットする
+ * - schedulesテーブルを全件削除
+ * - daily_reportsテーブルの昨日以前のデータを削除
+ */
+export async function resetScheduleData() {
+  const supabase = createSupabaseServerClient();
+
+  // 1. schedulesテーブルを全件削除 (TRUNCATE)
+  // TRUNCATEは高速で、関連するcargo_operationsもCASCADEで削除される
+  const { error: truncateError } = await supabase
+    .rpc('truncate_schedules_and_dependencies');
+  
+  if (truncateError) {
+    console.error("Error truncating schedules table:", truncateError.message);
+    return { error: truncateError };
+  }
+
+  // 2. daily_reportsの過去データを削除
+  // 'YYYY-MM-DD'形式で今日の日付を取得
+  const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+  
+  const { error: deleteError } = await supabase
+    .from('daily_reports')
+    .delete()
+    .lt('report_date', today); // report_dateが今日より前のものを削除
+
+  if (deleteError) {
+    console.error("Error deleting old daily reports:", deleteError.message);
+    return { error: deleteError };
+  }
+
+  // キャッシュをクリアして変更を反映
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/import");
+
+  return { error: null };
+}

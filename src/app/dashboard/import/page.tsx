@@ -4,24 +4,45 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { parseMultipleSchedules } from '@/lib/parser';
-import { importMultipleSchedules } from '@/lib/supabase/actions'; // 1. 呼び出す関数を変更
+import { importMultipleSchedules, resetScheduleData } from '@/lib/supabase/actions';
 import { useRouter } from 'next/navigation';
 import React, { useState, useTransition } from 'react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+
+// --- 【ここからが新設箇所】 ---
+/**
+ * Dateオブジェクトを 'YYYY-MM-DD' 形式の文字列に変換するヘルパー関数
+ * @param date - 変換対象のDateオブジェクト
+ * @returns 'YYYY-MM-DD' 形式の文字列
+ */
+const formatDate = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+
+// 新しいヘルパー関数を使って、明日の日付を'YYYY-MM-DD'形式に変換
+const tomorrowDateString = formatDate(tomorrow);
 
 export default function ImportPage() {
   const [textInput, setTextInput] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [isResetting, startResetTransition] = useTransition();
   const [message, setMessage] = useState('');
   const router = useRouter();
   
   const handleSubmit = () => {
     setMessage('');
     
-    // 2. ユニークなインポートIDを生成
     const importId = `imp-${Date.now()}`;
     const currentYear = new Date().getFullYear();
     
-    // 3. テキストを解析 (importIdを渡す)
     const parsedData = parseMultipleSchedules(textInput, currentYear, importId);
 
     if (parsedData.length === 0) {
@@ -30,39 +51,51 @@ export default function ImportPage() {
     }
 
     startTransition(async () => {
-      // 4. 新しいサーバーアクションを呼び出す
       const { data, error } = await importMultipleSchedules(parsedData);
       
       if (error) {
         setMessage(`エラーが発生しました: ${error.message}`);
       } else {
-        // 5. 処理結果のメッセージをDB関数の戻り値から生成
-        // @ts-ignore: rpcの戻り値の型が複雑なため一時的にignore
+        // @ts-ignore
         const { updated_count = 0, inserted_count = 0 } = data?.[0] || {};
         setMessage(`登録が完了しました。新規: ${inserted_count}件, 更新: ${updated_count}件`);
         setTextInput('');
         
-        // 1. 今日の日付を取得
-        const today = new Date();
-        // 2. 明日の日付を計算
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        // 3. 'YYYY-MM-DD' 形式の文字列に変換
-        const tomorrowDateString = tomorrow.toISOString().split('T')[0];
-        
-        // 4. 明日の日付のダッシュボードに、importIdを付けてリダイレクト
         router.push(`/dashboard/${tomorrowDateString}?importId=${importId}`);
       }
     });
   };
 
+  const handleReset = () => {
+    setMessage('');
+    if (window.confirm("本当にすべてのスケジュールデータと、昨日以前の日次レポートを削除しますか？\nこの操作は元に戻すことができません。")) {
+      startResetTransition(async () => {
+        const { error } = await resetScheduleData();
+        if (error) {
+          setMessage(`リセット処理中にエラーが発生しました: ${error.message}`);
+        } else {
+          setMessage('すべてのスケジュールデータと過去の日次レポートが正常にリセットされました。');
+        }
+      });
+    }
+  };
+
+
   return (
     <div className="container mx-auto max-w-4xl p-8 space-y-6">
-      <h1 className="text-3xl font-bold">船舶予定 一括インポート</h1>
-      <p className="text-muted-foreground">
-        複数日（10日分など）の船舶予定テキストをまとめて貼り付けて、一度にデータベースへ登録します。<br />
-        船の情報は、「連絡先」の行で区切られます。
-      </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold">船舶予定 一括インポート</h1>
+          <p className="text-muted-foreground mt-2">
+            複数日の船舶予定テキストを貼り付けて、データベースへ一括登録します。
+          </p>
+        </div>
+        {/* --- 【ここからが修正箇所】 --- */}
+        <Button onClick={() => router.push(`/dashboard/${tomorrowDateString}`)}>
+          ダッシュボードに戻る
+        </Button>
+        {/* --- 【ここまで】 --- */}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="import-text" className="text-lg">
@@ -81,7 +114,7 @@ export default function ImportPage() {
         size="lg"
         className="w-full"
         onClick={handleSubmit}
-        disabled={isPending}
+        disabled={isPending || isResetting}
       >
         {isPending ? '登録処理中...' : `一括登録を実行する`}
       </Button>
@@ -91,6 +124,25 @@ export default function ImportPage() {
           {message}
         </div>
       )}
+
+      <div className="border-t pt-6 mt-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>データのリセット</AlertTitle>
+          <AlertDescription className="flex justify-between items-center">
+            <div>
+              <p>すべての船舶予定と、昨日以前の日次レポートを完全に削除します。<br />この操作は元に戻すことができませんので、ご注意ください。</p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={handleReset}
+              disabled={isPending || isResetting}
+            >
+              {isResetting ? 'リセット中...' : 'リセット実行'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     </div>
   );
 }
