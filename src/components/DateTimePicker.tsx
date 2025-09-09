@@ -17,7 +17,7 @@ interface DateTimePickerProps {
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const date = value ? new Date(value) : new Date();
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-  const minutes = ['00', '10', '20', '30', '40', '50'];
+  const minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   const handleDateChange = (selectedDate: Date | undefined) => {
     if (!selectedDate) return;

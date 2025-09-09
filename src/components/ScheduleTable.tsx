@@ -145,7 +145,10 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="font-medium">{schedule.ship_name}</TableCell>
                   <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
                   <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
-                  <TableCell>入</TableCell>
+                  <TableCell>
+                    {schedule.arrival_side === '左舷' ? '入' : 
+                     schedule.arrival_side === '右舷' ? '出' : '-'}
+                  </TableCell>
                   <TableCell>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
                   <TableCell>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
                   <TableCell className="whitespace-pre-line">
@@ -182,7 +185,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
             <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
               <div className="flex items-center justify-center gap-2">
                 <PlusCircle className="h-4 w-4" />
-                <span>この日に新しい予定を追加</span>
+                <span>新規追加</span>
               </div>
             </TableCell>
           </TableRow>
