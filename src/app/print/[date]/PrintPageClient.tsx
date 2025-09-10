@@ -15,7 +15,7 @@ interface PrintPageClientProps {
 export function PrintPageClient({ date, report, schedules }: PrintPageClientProps) {
   
   useEffect(() => {
-    const timer = setTimeout(() => window.print(), 500);
+    const timer = setTimeout(() => window.print(), 1000);
     const handleAfterPrint = () => window.close();
     window.addEventListener('afterprint', handleAfterPrint);
     return () => {
@@ -24,42 +24,53 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
     };
   }, []);
 
-  const GANTT_PRINT_WIDTH = (210 - 20) * 3.78 - 32;
+  // 印刷時のガントチャートの固定幅
+  // A4横幅(約19cm)からラベル幅(2rem)を引いたサイズ
+  const GANTT_PRINT_WIDTH = 19 * 37.8 - 32; 
 
   return (
-    <div className="print-container">
-      {/* --- 【ここからが修正箇所】 --- */}
-      {/* ヘッダー: 高さは成り行き (flex-shrink-0) */}
-      <header className="flex-shrink-0">
-        <DashboardHeader 
-          date={date}
-          report={report}
-          isPrintView={true} // 印刷モードを有効化
-        />
-      </header>
-      
-      {/* 上半分: 船舶図 (flex-growで利用可能なスペースの45%を占める) */}
-      <section className="mt-2 border" style={{ flex: '0.45 1 0%' }}>
-        <GanttChart 
-          schedules={schedules} 
-          baseDate={date} 
-          latestImportId={null}
-          onScheduleClick={() => {}}
-          isPrintView={true}
-          printWidth={GANTT_PRINT_WIDTH}
-        />
-      </section>
+    <div className="print-preview-background">
+      <div className="print-outer-container">
+        <div className="print-content-wrapper font-sans">
+          
+          {/* 1. ヘッダー */}
+          <header style={{ flexShrink: 0 }}>
+            <DashboardHeader 
+              date={date}
+              report={report}
+              isPrintView={true}
+            />
+          </header>
+          
+          {/* 2. 船舶図 */}
+          <section style={{ height: '12cm', border: '1px solid #e5e7eb', marginTop: '0.5rem', padding: '0.5rem', borderRadius: '0.5rem', overflow: 'hidden' }}>
+             {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
+            <div style={{ height: 'calc(100% - 24px)', position: 'relative' }}>
+              <GanttChart 
+                schedules={schedules} 
+                baseDate={date} 
+                latestImportId={null}
+                onScheduleClick={() => {}}
+                isPrintView={true}
+                printWidth={GANTT_PRINT_WIDTH}
+              />
+            </div>
+          </section>
 
-      {/* 下半分: 荷役予定詳細 (flex-growで残りのスペースをすべて占める) */}
-      <section className="mt-2 flex-grow overflow-hidden">
-        <ScheduleTable 
-          schedules={schedules} 
-          latestImportId={null}
-          onScheduleClick={() => {}}
-          isPrintView={true}
-        />
-      </section>
-      {/* --- 【ここまで】 --- */}
+          {/* 3. 荷役予定詳細 */}
+          <section style={{ flexGrow: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>荷役予定詳細</h2> */}
+            <div style={{ flexGrow: 1, overflow: 'auto' }}> {/* 横スクロールが必要な場合はここがスクロールする */}
+              <ScheduleTable 
+                schedules={schedules} 
+                latestImportId={null}
+                onScheduleClick={() => {}}
+                isPrintView={true}
+              />
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

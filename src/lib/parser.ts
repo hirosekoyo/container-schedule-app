@@ -27,13 +27,15 @@ const determineBerthNumber = (bow_m: number, stern_m: number): number => {
   const midpoint_m = (bow_m + stern_m) / 2;
   const midpoint_bit = midpoint_m / BIT_LENGTH_M;
 
-  if (midpoint_bit < 45.5) {
-    return 6;
-  } else if (midpoint_bit >= 45.5 && midpoint_bit < 57.5) {
-    return 7;
-  } else { // 57.5以上
-    return 8;
-  }
+if (midpoint_bit < 35.5) {
+  return 5;
+} else if (midpoint_bit >= 35.5 && midpoint_bit < 45.5) {
+  return 6;
+} else if (midpoint_bit >= 45.5 && midpoint_bit < 57.5) {
+  return 7;
+} else { // 57.5以上
+  return 8;
+}
 };
 // --- 【ここまで】 ---
 

@@ -48,24 +48,23 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
   
   const graphAreaRef = useRef<HTMLDivElement>(null);
   const [graphAreaWidth, setGraphAreaWidth] = useState(0);
-
-  useEffect(() => {
-    if (isPrintView) {
-      // --- 【ここからが修正箇所】 ---
-      // printWidthが存在する場合のみ、stateを更新する
-      if (printWidth) {
-        setGraphAreaWidth(printWidth);
-      }
-      // --- 【ここまで修正】 ---
-      return;
-    };
+  
+useEffect(() => {
+    if (isPrintView && printWidth && printWidth > 0) {
+      // 印刷時はpropsで渡された固定幅を即座にセット
+      setGraphAreaWidth(printWidth);
+      return; // ResizeObserverはセットアップしない
+    }
 
     const graphElement = graphAreaRef.current;
     if (!graphElement) return;
+
+    // 通常表示時のみResizeObserverをセットアップ
     const resizeObserver = new ResizeObserver(entries => {
       if (entries[0]) setGraphAreaWidth(entries[0].contentRect.width);
     });
     resizeObserver.observe(graphElement);
+    
     return () => resizeObserver.unobserve(graphElement);
   }, [isPrintView, printWidth]);
 
