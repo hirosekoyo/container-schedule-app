@@ -16,6 +16,28 @@ const REGEX_MAP = {
   dateTime: /(\d{2})\/(\d{2})\s(\d{2}):(\d{2})\s*～\s*(\d{2})\/(\d{2})\s(\d{2}):(\d{2})/,
 };
 
+// --- 【ここからが新設箇所】 ---
+/**
+ * 船の中心点のビット位置から、岸壁番号を決定する
+ * @param bow_m - おもて位置 (メートル)
+ * @param stern_m - とも位置 (メートル)
+ * @returns 岸壁番号 (6, 7, or 8)
+ */
+const determineBerthNumber = (bow_m: number, stern_m: number): number => {
+  const midpoint_m = (bow_m + stern_m) / 2;
+  const midpoint_bit = midpoint_m / BIT_LENGTH_M;
+
+  if (midpoint_bit < 45.5) {
+    return 6;
+  } else if (midpoint_bit >= 45.5 && midpoint_bit < 57.5) {
+    return 7;
+  } else { // 57.5以上
+    return 8;
+  }
+};
+// --- 【ここまで】 ---
+
+
 const parseScheduleBlock = (
   textBlock: string,
   referenceYear: number,
@@ -58,6 +80,10 @@ const parseScheduleBlock = (
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
     // --- 【ここからが修正箇所】 ---
+    // 新しいヘルパー関数を呼び出して、berth_numberを動的に決定
+    const berth_number = determineBerthNumber(bow_position_m_float, stern_position_m_float);
+    // --- 【ここまで】 ---
+    
     const arrivalMonth = parseInt(dateTimeMatch[1], 10);
     const arrivalDay = parseInt(dateTimeMatch[2], 10);
     const arrivalHour = parseInt(dateTimeMatch[3], 10);
@@ -67,21 +93,13 @@ const parseScheduleBlock = (
     const departureHour = parseInt(dateTimeMatch[7], 10);
     const departureMinute = parseInt(dateTimeMatch[8], 10);
 
-    // 1. Dateオブジェクトを、タイムゾーンを意識しない単純な日付・時刻の入れ物として使う
     const arrivalDate = new Date(referenceYear, arrivalMonth - 1, arrivalDay, arrivalHour, arrivalMinute);
     const departureDate = new Date(referenceYear, departureMonth - 1, departureDay, departureHour, departureMinute);
     if (departureDate < arrivalDate) departureDate.setFullYear(departureDate.getFullYear() + 1);
 
-    // 2. 'YYYY-MM-DD HH:mm:ss' 形式のタイムゾーンなし文字列を自前で生成する
     const formatForDB = (date: Date) => {
         const pad = (n: number) => String(n).padStart(2, '0');
-        const yyyy = date.getFullYear();
-        const MM = pad(date.getMonth() + 1);
-        const dd = pad(date.getDate());
-        const HH = pad(date.getHours());
-        const mm = pad(date.getMinutes());
-        const ss = pad(date.getSeconds());
-        return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     };
 
     const agentName = agentMatch ? agentMatch[1].trim() : undefined;
@@ -89,15 +107,14 @@ const parseScheduleBlock = (
 
     const baseScheduleData = {
       ship_name,
-      berth_number: 6,
-      arrival_time: formatForDB(arrivalDate), // 3. 生成した文字列をセット
-      departure_time: formatForDB(departureDate), // 3. 生成した文字列をセット
+      berth_number: berth_number, // 動的に決定した値を使用
+      arrival_time: formatForDB(arrivalDate),
+      departure_time: formatForDB(departureDate),
       arrival_side,
       bow_position_m: Math.round(bow_position_m_float),
       stern_position_m: Math.round(stern_position_m_float),
       planner_company: planner_company,
     };
-    // --- 【ここまで修正】 ---
 
     const hashSource = Object.values(baseScheduleData).join('|');
     const data_hash = createHash('sha256').update(hashSource).digest('hex');

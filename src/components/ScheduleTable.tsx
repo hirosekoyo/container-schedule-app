@@ -192,7 +192,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
-                  <span>この日に新しい予定を追加</span>
+                  <span>新規追加</span>
                 </div>
               </TableCell>
             </TableRow>

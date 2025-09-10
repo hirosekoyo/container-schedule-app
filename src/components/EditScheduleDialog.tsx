@@ -55,7 +55,7 @@ const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string =
   return dbTimestamp.replace(' ', 'T').substring(0, 16);
 };
 
-type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company'> & {
+type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number'> & {
   arrival_time_local: string;
   departure_time_local: string;
   bow_position_notation: string;
@@ -76,37 +76,35 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           ship_name: schedule.ship_name,
           arrival_side: schedule.arrival_side,
           planner_company: schedule.planner_company,
+          berth_number: schedule.berth_number,
           arrival_time_local: toDatetimeLocalString(schedule.arrival_time),
           departure_time_local: toDatetimeLocalString(schedule.departure_time),
           bow_position_notation: metersToBitNotation(Number(schedule.bow_position_m)),
           stern_position_notation: metersToBitNotation(Number(schedule.stern_position_m)),
         });
         setOperationsData(schedule.cargo_operations.map(op => ({ ...op, start_time_local: toDatetimeLocalString(op.start_time) })));
-      } else { // --- 新規作成モード (ここを修正) ---
-        
-        // --- 【ここからが修正箇所】 ---
-        // scheduleDateForNew (例: '2025-09-10') を元に初期時刻を生成
-        // 時刻は「今日の現在時刻」ではなく、シンプルに「朝8時」などで固定する
+      } else { // --- 新規作成モード ---
         const initialTime = `${scheduleDateForNew}T08:00`;
-        // --- 【ここまで修正】 ---
-
         setScheduleData({
           ship_name: '',
           arrival_side: '左舷',
           planner_company: '',
-          arrival_time_local: initialTime, // 生成した初期時刻をセット
-          departure_time_local: initialTime, // 生成した初期時刻をセット
+          berth_number: 6, // 新規作成時のデフォルト岸壁
+          arrival_time_local: initialTime,
+          departure_time_local: initialTime,
           bow_position_notation: '',
           stern_position_notation: '',
         });
         setOperationsData([]);
       }
     }
-  }, [schedule, open, scheduleDateForNew]); 
+  }, [schedule, open, scheduleDateForNew]);
   
   const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setScheduleData(prev => prev ? { ...prev, [name]: value } : null);
+    // berth_number は数値として state に保存
+    const isNumberField = name === 'berth_number';
+    setScheduleData(prev => prev ? { ...prev, [name]: isNumberField ? parseInt(value, 10) : value } : null);
   };
   const handleScheduleDateTimeChange = (name: 'arrival_time_local' | 'departure_time_local', value: string) => {
     setScheduleData(prev => prev ? { ...prev, [name]: value } : null);
@@ -138,7 +136,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
     const dataForHash = {
       ship_name: scheduleData.ship_name,
-      berth_number: schedule?.berth_number ?? 6, // 編集時は既存の値、新規は6
+      berth_number: scheduleData.berth_number,
       arrival_time: scheduleData.arrival_time_local,
       departure_time: scheduleData.departure_time_local,
       arrival_side: scheduleData.arrival_side,
@@ -159,31 +157,26 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
     if (schedule) { // --- 編集モード ---
       const dataToSave = { ...dataForHash, data_hash: newDataHash, last_import_id: latestImportId };
-    startTransition(async () => {
-      let result;
-      if (schedule) { // 編集モード
+      startTransition(async () => {
         // @ts-ignore
-        result = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
-      } else { // 新規作成モード
+        const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
+        if (!error) { alert("予定が更新されました。"); onOpenChange(false); router.refresh(); }
+        else { alert(`更新中にエラーが発生しました: ${error.message}`); }
+      });
+    } else { // --- 新規作成モード ---
+      const dataToSave = {
+        ...dataForHash,
+        schedule_date: scheduleDateForNew,
+        data_hash: newDataHash,
+        last_import_id: latestImportId,
+        update_flg: false,
+      };
+      startTransition(async () => {
         // @ts-ignore
-        result = await createScheduleWithOperations(dataToSave, opsToSave);
-      }
-
-      if (!result.error) {
-        alert(schedule ? "予定が更新されました。" : "新しい予定が作成されました。");
-        onOpenChange(false);
-        
-        // --- 【ここが修正箇所】 ---
-        // router.refresh() はサーバーデータの再取得と再レンダリングをトリガーする
-        // これにより、親コンポーネント(DashboardClient)のuseEffectが再実行されるわけではないが、
-        // サーバーコンポーネント(page.tsx)が再描画され、最新のデータがDashboardClientに渡される
-        router.refresh();
-        // --- 【ここまで】 ---
-
-      } else {
-        alert(`エラーが発生しました: ${result.error.message}`);
-      }
-    });
+        const { error } = await createScheduleWithOperations(dataToSave, opsToSave);
+        if (!error) { alert("新しい予定が作成されました。"); onOpenChange(false); router.refresh(); }
+        else { alert(`作成中にエラーが発生しました: ${error.message}`); }
+      });
     }
   };
 
@@ -199,59 +192,68 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto pr-6">
-          <h3 className="text-lg font-semibold border-b pb-2">船舶情報</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <div className="md:col-span-2"><Label>船名</Label><Input name="ship_name" value={scheduleData?.ship_name || ''} onChange={handleScheduleChange} /></div>
-            <div><Label>着岸時間</Label><DateTimePicker value={scheduleData?.arrival_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('arrival_time_local', v)} /></div>
-            <div><Label>離岸時間</Label><DateTimePicker value={scheduleData?.departure_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('departure_time_local', v)} /></div>
-            <div><Label>おもて</Label><Input name="bow_position_notation" placeholder="例: 33+15" value={scheduleData?.bow_position_notation || ''} onChange={handleScheduleChange} /></div>
-            <div><Label>とも</Label><Input name="stern_position_notation" placeholder="例: 40-05" value={scheduleData?.stern_position_notation || ''} onChange={handleScheduleChange} /></div>
-            <div>
-                <Label>舷付け</Label>
-                <Select name="arrival_side" value={scheduleData?.arrival_side || '左舷'} onValueChange={handleScheduleSideChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="左舷">左舷</SelectItem>
-                    <SelectItem value="右舷">右舷</SelectItem>
-                  </SelectContent>
-                </Select>
-            </div>
-            <div><Label>プランナ</Label><Input name="planner_company" value={scheduleData?.planner_company || ''} onChange={handleScheduleChange} /></div>
-          </div>
-          <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-lg font-semibold">荷役作業</h3>
-            <Button type="button" size="sm" variant="outline" onClick={addOperationRow}><PlusCircle className="mr-2 h-4 w-4" />作業行を追加</Button>
-          </div>
+          
+          {/* --- 【ここからが修正箇所】 --- */}
+
+          {/* === 船舶情報 === */}
           <div className="space-y-4">
-            {operationsData.map((op, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
-                <div className="col-span-2">
-                  <Label>使用GC</Label>
-                  <Combobox
-                    options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))}
-                    value={op.crane_names || ''}
-                    onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)}
-                    placeholder="GCを選択..."
-                  />
-                </div>
-                <div className="col-span-1"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
-                  <div className="col-span-2">
-                  <Label>GC運転</Label>
-                  <Combobox
-                    options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))}
-                    value={op.stevedore_company || ''}
-                    onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)}
-                    placeholder="会社を選択..."
-                  />
-                </div>
-                <div className="col-span-2"><Label>備考</Label><Textarea name="remarks" value={op.remarks || ''} onChange={(e) => handleOperationChange(index, e)} className="h-10" /></div>
-                {/* --- 【ここからが修正箇所】 --- */}
-                <div className="col-span-1 flex justify-end"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
-                {/* --- 【ここまで修正】 --- */}
+            <h3 className="text-lg font-semibold border-b pb-2">船舶情報</h3>
+            {/* 1行目: 船名(8割) 岸壁(2割) */}
+            <div className="grid grid-cols-10 gap-4">
+              <div className="col-span-8"><Label>船名</Label><Input name="ship_name" value={scheduleData?.ship_name || ''} onChange={handleScheduleChange} /></div>
+              <div className="col-span-2"><Label>岸壁</Label><Input name="berth_number" type="number" value={scheduleData?.berth_number || ''} onChange={handleScheduleChange} /></div>
+            </div>
+            {/* 2行目: 着岸時間(5割) 離岸時間(5割) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>着岸時間</Label><DateTimePicker value={scheduleData?.arrival_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('arrival_time_local', v)} /></div>
+              <div><Label>離岸時間</Label><DateTimePicker value={scheduleData?.departure_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('departure_time_local', v)} /></div>
+            </div>
+            {/* 3行目: 4項目を均等配置 */}
+            <div className="grid grid-cols-4 gap-4">
+              <div><Label>おもて</Label><Input name="bow_position_notation" placeholder="例: 33+15" value={scheduleData?.bow_position_notation || ''} onChange={handleScheduleChange} /></div>
+              <div><Label>とも</Label><Input name="stern_position_notation" placeholder="例: 40-05" value={scheduleData?.stern_position_notation || ''} onChange={handleScheduleChange} /></div>
+              <div>
+                  <Label>舷付け</Label>
+                  <Select name="arrival_side" value={scheduleData?.arrival_side || '左舷'} onValueChange={handleScheduleSideChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="左舷">左舷</SelectItem>
+                      <SelectItem value="右舷">右舷</SelectItem>
+                    </SelectContent>
+                  </Select>
               </div>
-            ))}
+              <div><Label>プランナ</Label><Input name="planner_company" value={scheduleData?.planner_company || ''} onChange={handleScheduleChange} /></div>
+            </div>
           </div>
+
+          {/* === 荷役作業 === */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="text-lg font-semibold">荷役作業</h3>
+              <Button type="button" size="sm" variant="outline" onClick={addOperationRow}><PlusCircle className="mr-2 h-4 w-4" />作業行を追加</Button>
+            </div>
+            <div className="space-y-4">
+              {operationsData.map((op, index) => (
+                <div key={index} className="space-y-2 rounded-md border p-4">
+                  {/* 1行目 */}
+                  <div className="grid grid-cols-10 gap-4 items-end">
+                    <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
+                    <div className="col-span-2"><Label>使用GC</Label><Combobox options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.crane_names || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)} placeholder="GCを選択..." /></div>
+                    <div className="col-span-2"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
+                    <div className="col-span-2"><Label>GC運転</Label><Combobox options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.stevedore_company || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)} placeholder="会社を選択..." /></div>
+                  </div>
+                  {/* 2行目 */}
+                  <div className="grid grid-cols-10 gap-4 items-end">
+                    <div className="col-span-8"><Label>備考</Label><Textarea name="remarks" value={op.remarks || ''} onChange={(e) => handleOperationChange(index, e)} className="h-10" /></div>
+                    <div className="col-span-2 flex justify-end"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* --- 【ここまで修正】 --- */}
+          
           <DialogFooter>
             <Button type="submit" disabled={isPending}>{isPending ? "保存中..." : "更新"}</Button>
           </DialogFooter>

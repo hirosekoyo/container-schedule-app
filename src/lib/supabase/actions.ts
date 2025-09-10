@@ -30,8 +30,20 @@ export async function getDailyReportByDate(date: string): Promise<DailyReport | 
  */
 export async function getSchedulesByDate(date: string): Promise<ScheduleWithOperations[]> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase.from("schedules").select(`*, cargo_operations (*)`).eq("schedule_date", date).order("arrival_time", { ascending: true });
-  if (error) { console.error("Error fetching schedules:", error.message); return []; }
+  const { data, error } = await supabase
+    .from("schedules")
+    .select(`*, cargo_operations (*)`)
+    .eq("schedule_date", date)
+    // --- 【ここからが修正箇所】 ---
+    // .order() を複数回チェイン（つなげる）することで、複合キーによるソートが実現できる
+    .order("berth_number", { ascending: true }) // 第1キー: 岸壁番号を昇順で
+    .order("arrival_time", { ascending: true }); // 第2キー: 着岸時間を昇順で
+    // --- 【ここまで修正】 ---
+
+  if (error) {
+    console.error("Error fetching schedules:", error.message);
+    return [];
+  }
   return data || [];
 }
 
