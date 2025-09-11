@@ -38,8 +38,6 @@ if (midpoint_bit < 35.5) {
   return 8;
 }
 };
-// --- 【ここまで】 ---
-
 
 const parseScheduleBlock = (
   textBlock: string,
@@ -67,8 +65,9 @@ const parseScheduleBlock = (
     const nameWithoutNumber = rawShipName.replace(/^\d+\s*/, '');
     const ship_name = nameWithoutNumber.replace(/◆\s*/, '').trim();
     
+    // --- 【ここからが修正箇所】 ---
     const sternMainBit = parseInt(sternBitMatch[1], 10);
-    if (sternMainBit < MIN_BIT_NUMBER) return [];
+    // 船尾ビットのチェックはここから削除
     
     const sign = sternBitMatch[2];
     const remainder = sternBitMatch[3] ? parseInt(sternBitMatch[3], 10) : 0;
@@ -83,6 +82,14 @@ const parseScheduleBlock = (
     const loa_m = parseFloat(loaMatch[1]);
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
+    // フィルタリングロジックを、すべての位置情報が計算された後に移動
+    const min_position_m = MIN_BIT_NUMBER * BIT_LENGTH_M;
+    if (bow_position_m_float < min_position_m && stern_position_m_float < min_position_m) {
+      console.log(`処理対象外: 船体の両端が${MIN_BIT_NUMBER}ビット未満です。`, { ship_name });
+      return []; // 両端が範囲外ならスキップ
+    }
+    // --- 【ここまで修正】 ---
+
     const berth_number = determineBerthNumber(bow_position_m_float, stern_position_m_float);
     const remarks = remarksMatch ? remarksMatch[1].trim() : undefined;
     
@@ -110,7 +117,7 @@ const parseScheduleBlock = (
 
     const baseScheduleData = {
       ship_name,
-      berth_number: berth_number, // 動的に決定した値を使用
+      berth_number: berth_number,
       arrival_time: formatForDB(arrivalDate),
       departure_time: formatForDB(departureDate),
       arrival_side,

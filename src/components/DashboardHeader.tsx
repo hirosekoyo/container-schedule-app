@@ -8,11 +8,10 @@ import { Separator } from './ui/separator';
 interface DashboardHeaderProps {
   date: string;
   report: DailyReport | null;
-  isPrintView?: boolean; // 印刷モード用のpropsを追加
+  isPrintView?: boolean;
 }
 
 const WindInfo: React.FC<{ label: string; speed: number | null | undefined }> = ({ label, speed }) => (
-  // 印刷用にフォントサイズを小さく調整
   <div className="flex flex-col items-center">
     <span className="text-[8pt] text-gray-500">{label}</span>
     <span className="text-sm font-semibold">{speed ?? '-'}</span>
@@ -26,31 +25,39 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
 
-if (isPrintView) {
+  if (isPrintView) {
     return (
-      <div className="border-b pb-1 text-xs font-sans">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-shrink-0">
+      <div className="text-xs font-sans"> 
+        <div className="flex justify-between items-center gap-4"> {/* items-start -> items-center */}
+          
+          {/* --- 【ここからが修正箇所】 --- */}
+          {/* 日付と当直者をflexで囲む */}
+          <div className="flex items-center gap-4">
             <h1 className="text-base font-bold">{displayDate}</h1>
-            <p>当直者: {report?.primary_staff || '-'}, {report?.secondary_staff || '-'}</p>
-            {report?.support_staff && <p>サポート: {report.support_staff}</p>}
+            <div>
+              <span className="text-[9pt] text-gray-500">当直者</span>
+              <p className="font-semibold">{report?.primary_staff || '-'}, {report?.secondary_staff || '-'}</p>
+              {report?.support_staff && <p className="text-xs text-gray-600">サポート: {report.support_staff}</p>}
+            </div>
           </div>
+          {/* --- 【ここまで】 --- */}
+
           <div className="grid grid-cols-8 gap-x-1 flex-shrink-0 border rounded-md p-1">
-            <WindInfo label="0-3" speed={report?.wind_speed_1} />
-            <WindInfo label="3-6" speed={report?.wind_speed_2} />
-            <WindInfo label="6-9" speed={report?.wind_speed_3} />
-            <WindInfo label="9-12" speed={report?.wind_speed_4} />
-            <WindInfo label="12-15" speed={report?.wind_speed_5} />
-            <WindInfo label="15-18" speed={report?.wind_speed_6} />
-            <WindInfo label="18-21" speed={report?.wind_speed_7} />
-            <WindInfo label="21-24" speed={report?.wind_speed_8} />
+            <WindInfo label="0〜" speed={report?.wind_speed_1} />
+            <WindInfo label="3〜" speed={report?.wind_speed_2} />
+            <WindInfo label="6〜" speed={report?.wind_speed_3} />
+            <WindInfo label="9〜" speed={report?.wind_speed_4} />
+            <WindInfo label="12〜" speed={report?.wind_speed_5} />
+            <WindInfo label="15〜" speed={report?.wind_speed_6} />
+            <WindInfo label="18〜" speed={report?.wind_speed_7} />
+            <WindInfo label="21〜" speed={report?.wind_speed_8} />
           </div>
         </div>
       </div>
     );
   }
 
-  // --- 通常表示のレイアウト ---
+  // --- 通常表示のレイアウト (変更なし) ---
   return (
     <>
       <div 
@@ -67,14 +74,14 @@ if (isPrintView) {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-4 rounded-md border p-2 md:grid-cols-8 ml-auto">
-            <WindInfo label="0~3" speed={report?.wind_speed_1} />
-            <WindInfo label="3-6" speed={report?.wind_speed_2} />
-            <WindInfo label="6-9" speed={report?.wind_speed_3} />
-            <WindInfo label="9~12" speed={report?.wind_speed_4} />
-            <WindInfo label="12~15" speed={report?.wind_speed_5} />
-            <WindInfo label="15-18" speed={report?.wind_speed_6} />
-            <WindInfo label="18~21" speed={report?.wind_speed_7} />
-            <WindInfo label="21-24" speed={report?.wind_speed_8} />
+            <WindInfo label="0〜" speed={report?.wind_speed_1} />
+            <WindInfo label="3〜" speed={report?.wind_speed_2} />
+            <WindInfo label="6〜" speed={report?.wind_speed_3} />
+            <WindInfo label="9〜" speed={report?.wind_speed_4} />
+            <WindInfo label="12〜" speed={report?.wind_speed_5} />
+            <WindInfo label="15〜" speed={report?.wind_speed_6} />
+            <WindInfo label="18〜" speed={report?.wind_speed_7} />
+            <WindInfo label="21〜" speed={report?.wind_speed_8} />
           </div>
         </div>
       </div>

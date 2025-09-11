@@ -13,8 +13,8 @@
 }
 
 .print-preview-background {
-  background-color: #f0f2f5;
-  padding: 2rem;
+  background-color: #000000;
+  /* padding: 0.5rem; */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -31,48 +31,56 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 11cm auto 1fr;
+  gap: 0.5rem;
+}
+
+.print-gantt-card {
+  height: 11cm;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.print-table-card {
+  height: max-content;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
-
-.print-table {
-  font-size: 7.5pt;
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  border: 1px solid #ccc;
-}
-.print-table th, .print-table td {
-  /* --- 【ここからが修正箇所】 --- */
-  
-  /* 1. 行の高さを調整 */
-  padding: 4px 2px; /* 上下のパディングを増やして高さを確保 */
-  vertical-align: middle; /* テキストを上下中央揃えに */
-
-  /* 2. 横スクロールバーをなくすための設定 */
-  /* white-space: nowrap;  */
-  /* テキストの折り返しを禁止 (これが幅の原因) */
-  overflow: hidden;        /* セルの幅からはみ出したテキストを隠す */
-  text-overflow: ellipsis; /* 隠れた部分を "..." で表示 */
-  
-  /* 既存のスタイル */
-  border-right: 1px solid #ccc;
-  text-align: center;
-  /* --- 【ここまで修正】 --- */
-}
-/* 最後の列の右枠線は不要なので削除 */
-.print-table th:last-child, .print-table td:last-child {
-  border-right: none;
-}
-/* 船名だけは左寄せにする */
-.print-table td:nth-child(2),
-.print-table th:nth-child(2) {
-  text-align: left;
-  padding-left: 4px;
-}
-
 .print-table h2 {
   font-size: 12pt;
   margin-bottom: 0.25rem;
   border-bottom: 1px solid #e5e7eb;
 }
+.print-table table {
+  table-layout: fixed;
+}
+.print-table th, .print-table td {
+  padding: 2px 4px;
+  font-size: 7.5pt;
+  vertical-align: top;
+  border: 1px solid #ccc;
+}
+
+.print-table th, .print-table td {
+  padding: 4px 2px;
+  vertical-align: middle;
+  border-right: 1px solid #ccc;
+  text-align: center; /* デフォルトを中央揃えに */
+}
+.print-table th {
+  font-weight: 600; /* ヘッダーの文字を太く */
+}
+.print-table th:last-child, .print-table td:last-child {
+  border-right: none;
+}
+
+/* 船名と備考列だけ左寄せに上書き */
+.print-table th:nth-child(2), .print-table td:nth-child(2),
+.print-table th:nth-child(14), .print-table td:nth-child(14) {
+  text-align: left;
+  padding-left: 4px;
+}
+/* --- 【ここまで】 --- */

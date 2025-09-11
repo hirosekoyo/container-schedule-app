@@ -1,79 +1,62 @@
-要件定義書 Ver.2.0 (最新版)：コンテナ船荷役予定管理アプリ
+要件定義書 Ver.2.1 (最終版)：コンテナ船荷役予定管理アプリ
 1. アプリ概要
-アプリ名: （仮）コンテナ船荷役予定管理アプリ
-目的: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCやスマートフォンからリアルタイムに最新の予定を確認できる環境を構築する。
+アプリ名: コンテナ船荷役予定管理アプリ
+目的: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCからリアルタイムに最新の予定を確認・編集できる環境を構築する。
 利用者: 荷役機器を管理する港湾管理会社の担当者。
-解決したい課題:
-手作業による作成・更新の手間を削減したい。
-船舶動静の変更に迅速かつ簡単に対応したい。
-現場担当者がスマートフォンでリアルタイムに予定を確認できるようにしたい。
 2. 機能要件
-後述の「5. データベース設計」で定義されたテーブル構造に基づき、データを管理する。
-船舶予定情報: 船名、着岸・離岸日時、着岸位置など。
-荷役作業情報: 使用GC、本数、備考など。
-日次情報: 当直者、風速、メモなど。
-入力方法は、「2.4. データ一括インポート機能」による自動解析と、各画面からの手動入力・修正を併用する。
-メイン画面は、以下の主要エリアで構成される。
-2.3.1. ヘッダー情報エリア (画面上部)
-表示項目: 選択された日付の「日付」「当直者」「サポート者」「メモ」「時間帯ごとの風速情報」を表示する。
-データソース: daily_reports テーブルから取得する。
-機能: カード部分をクリックすると、当直者、風速、メモ情報を入力・編集するためのモーダルが表示される。
-2.3.2. 船舶図（ガントチャート）エリア (画面中央)
-縦軸: 時間（0:00 〜 翌2:00を2時間ごとに表示）。
-横軸: 着岸場所（ビット番号: 33〜64）。画面幅に応じて動的に拡縮する。
-表示内容:
-各船舶予定(schedules)を、着岸時間・離岸時間・位置に基づき、矩形ブロックとして表示する。
-矩形ブロック内には「船名」と、arrival_sideに応じた矢印（左舷→ ←, 右舷→ →）を表示する。
-日をまたぐ予定は、各日付の滞在時間分だけが表示される。
-33ビット未満に位置する船は、左端を33ビットに揃えて描画する。
+日付ごとの予定を表示・編集するメイン画面。以下の要素で構成される。
+ページナビゲーション:
+表示している日付の前日・翌日に移動するための矢印ボタンを配置。
+現在の日付をクリックするとカレンダーが表示され、任意の日付にジャンプできる。
+データインポートページへのリンクボタンと、印刷プレビューを開くボタンを配置。
+ヘッダー情報エリア:
+選択された日付の「日付」「当直者」「サポート者」を表示する。
+カード全体をクリックすると、当直者、風速、メモ情報を編集するためのモーダルが表示される。
+船舶図（ガントチャート）エリア:
+縦軸: 時間（0:00 〜 翌2:00）。
+横軸: ビット番号（33〜64）。画面幅に応じて動的に拡縮する。
 ビット番号の上部に、クレーンの止め位置を示す静的なボックスを表示する。
-機能:
-各船舶ブロックをクリックすると、その予定を編集するためのモーダルが表示される。
-データインポート直後には、変更があった予定や削除候補の予定がハイライト表示される。
-2.3.3. 荷役予定詳細テーブルエリア (画面下部)
-表示内容: 選択された日付の全予定をテーブル形式で表示する。
-表示列: 岸壁, 船名, 着岸時間, 離岸時間, 方向(入/出), おもて, とも, 荷役開始, G(台数), 使用GC, 本数, GC運転, プランナ, 備考。
-データソース: schedules テーブルと cargo_operations テーブルのデータを結合して表示する。
-表示ロジック:
-方向 列: arrival_sideが左舷の場合は「入」、右舷の場合は「出」を表示する。
-おもて, とも 列: データベースにメートル(m)で保存されている整数値を、港湾業務の慣習に合わせたビット表記（例: 42+15, 58-03）に変換して表示する。
-着岸時間, 離岸時間: schedule_dateと日付が異なる場合は、日付と時刻を2段で表示する。
-機能:
-各行をクリックすると、その予定を編集するためのモーダルが表示される。
-各行の末尾にゴミ箱アイコンを配置。クリックすると確認ダイアログを経て、予定を削除する。
-テーブルの最終行に「新規作成行」を表示。クリックすると、空の予定編集モーダルが表示される。
-データインポート直後には、変更があった予定や削除候補の予定がハイライト表示される。
-目的: 複数日分の船舶予定が記載された特定フォーマットのテキストデータから、予定情報を自動抽出し、データベースに一括登録する。
+各船舶予定を、着岸日時・離岸日時・位置に基づき矩形ブロックとして表示。
+船体が33ビット未満にかかる予定は、左端を33ビットに揃えて描画する。
+各船舶ブロックをクリックすると、予定編集モーダルが開く。
+インポート直後は、変更があった予定や削除候補の予定が色分け（ハイライト）表示される。
+荷役予定詳細テーブルエリア:
+選択された日付の全予定を、**第1キー: 岸壁 (昇順)、第2キー: 着岸時間 (昇順)**でソートして表示。
+方向列: arrival_sideが左舷なら「入」、右舷なら「出」を表示。
+おもて/とも列: メートル値をビット表記（例: 58-03）に変換して表示。
+時刻表示: schedule_dateと日付が異なる場合は、日付と時刻を2段で表示。
+各行をクリックすると予定編集モーダルが開く。ゴミ箱アイコンクリックで予定を削除。
+最終行の「新規作成行」クリックで、空の予定編集モーダルが開く。
+メモ編集エリア:
+荷役予定詳細の下に配置。
+daily_reportsテーブルのmemoフィールドを表示・編集できる。
+目的: 複数日分の船舶予定テキストを一括で解析し、データベースに登録する。
 処理フロー:
-テキスト入力: 専用ページで、複数日分のテキストデータをテキストエリアに貼り付ける。
-データ分割: テキストを「連絡先」の行を区切りとして、個別の船舶データブロックに分割する。
-データ抽出: 各ブロックから船名、全長、綱位置、船尾ビット、着岸・離岸日時、代理店などを正規表現で抽出する。船名の先頭にある数字や◆記号は除去して整形する。
-データ加工・計算:
-1ビット = 30mとして、とも位置(m)とおもて位置(m)を計算し、最も近い整数に丸める。
-抽出した代理店名を、定義済みの変換マップに基づき荷役会社コード（例: GEN）に変換する。
-各データの内容からハッシュ値 (data_hash) を計算する。
+データ分割: テキストを「連絡先」行を区切りとして、個別の船舶データブロックに分割する。
+データ抽出: 船名（行頭の数字や◆は除去）、着岸・離岸日時、着岸位置などを抽出。
+データ加工:
+船の中心点の位置から、着岸する岸壁番号 (berth_number) を自動で判定する。
+schedulesテーブルの各フィールドを元に**ハッシュ値 (data_hash)**を計算する。
 今回のインポート処理を識別する**ユニークID (last_import_id)**を生成する。
 日をまたぐ予定は、滞在日数分のレコードに複製する。
-データベース登録 (UPSERT):
-schedule_dateとship_nameの組み合わせで既存データを探す。
-存在しない場合: 新規作成 (INSERT) する。
-存在し、かつdata_hashが異なる場合: データを上書き (UPDATE) し、**update_flgをtrue**にする。
-存在し、かつdata_hashが同じ場合: last_import_idのみを更新し、**update_flgをfalse**にする。
-リダイレクト: 処理完了後、インポートしたデータの翌日のダッシュボードに、importIdを付けてリダイレクトする。
+データベース登録 (高度なUPSERT):
+schedule_dateとship_nameで既存データを検索。
+新規 → INSERT。
+既存 (ハッシュ不一致) → UPDATEし、update_flgをtrueにする。
+既存 (ハッシュ一致) → last_import_idのみUPDATEし、update_flgをfalseにする。
+リダイレクト: 処理完了後、インポート作業日の翌日のダッシュボードに、importIdを付けてリダイレクトする。
+ダッシュボードの「印刷」ボタンから開かれる、A4縦向きに最適化されたページ。
+レイアウト: 通常画面のレイアウトを、CSS transform: scale() を使ってA4用紙一枚に収まるように縮小して表示する。
+非表示要素: 日付ナビゲーションやインポートボタンなどの操作UIは非表示にする。
 3. 非機能要件
-権限管理: 開発中は認証なし。将来的には編集者と閲覧者の権限を分離。
-レスポンシブデザイン: PCとスマートフォンの各デバイスに最適化されたUIを提供する。
+権限管理: 開発中は認証なし。
+レスポンシブデザイン: PC（通常画面）とA4用紙（印刷画面）に最適化。
 4. 開発・技術要件
-認証: （将来実装）Supabase Auth
 データベース: Supabase (PostgreSQL)
-技術スタック:
-フレームワーク: Next.js (App Router)
-言語: TypeScript
-スタイリング: Tailwind CSS
-UIコンポーネント: Shadcn/ui, date-fns
-5. データベース設計 (Ver.2.0)
+技術スタック: Next.js (App Router), TypeScript, Tailwind CSS, Shadcn/ui, date-fns, date-fns-tz
+5. データベース設計 (Ver.2.1)
 5.1. schedules (船舶予定テーブル)
-日またぎの予定は、滞在日数分レコードが作成される。
+schedule_dateとship_nameの組み合わせでユニーク制約を持つ。
 code
 SQL
 CREATE TABLE schedules (
@@ -81,18 +64,17 @@ CREATE TABLE schedules (
   schedule_date DATE NOT NULL,
   ship_name TEXT NOT NULL,
   berth_number INT NOT NULL,
-  arrival_time TIMESTAMP NOT NULL,      -- 型変更: TIME -> TIMESTAMP
-  departure_time TIMESTAMP NOT NULL,    -- 型変更: TIME -> TIMESTAMP
-  arrival_side TEXT,                    -- '右舷' or '左舷'
+  arrival_time TIMESTAMP NOT NULL,      -- タイムゾーンなし日時
+  departure_time TIMESTAMP NOT NULL,    -- タイムゾーンなし日時
+  arrival_side TEXT,
   bow_position_m NUMERIC NOT NULL,
   stern_position_m NUMERIC NOT NULL,
   planner_company TEXT,
-  -- === 追加カラム ===
-  data_hash TEXT,                       -- データ内容のハッシュ値
-  last_import_id TEXT,                  -- 最終インポートID
-  update_flg BOOLEAN DEFAULT FALSE,     -- インポート時に内容が更新されたか
+  remarks TEXT,                         -- 船の予定全体に対する備考
+  data_hash TEXT,
+  last_import_id TEXT,
+  update_flg BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now(),
-  -- === 制約 ===
   CONSTRAINT schedules_date_name_unique UNIQUE (schedule_date, ship_name)
 );
 5.2. cargo_operations (荷役予定テーブル)
@@ -101,11 +83,10 @@ SQL
 CREATE TABLE cargo_operations (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   schedule_id BIGINT NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
-  start_time TIMESTAMP,                 -- 型変更: TIME -> TIMESTAMP
+  start_time TIMESTAMP,                 -- タイムゾーンなし日時
   crane_names TEXT,
   container_count INT,
   stevedore_company TEXT,
-  remarks TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 5.3. daily_reports (日次情報テーブル)
@@ -117,14 +98,51 @@ CREATE TABLE daily_reports (
   primary_staff TEXT,
   secondary_staff TEXT,
   support_staff TEXT,
-  wind_speed_1 NUMERIC,
-  wind_speed_2 NUMERIC,
-  wind_speed_3 NUMERIC,
-  wind_speed_4 NUMERIC,
-  wind_speed_5 NUMERIC,
-  wind_speed_6 NUMERIC,
-  wind_speed_7 NUMERIC,
-  wind_speed_8 NUMERIC,
-  memo TEXT,                            -- 追加カラム: メモ
+  wind_speed_1 NUMERIC, wind_speed_2 NUMERIC,
+  wind_speed_3 NUMERIC, wind_speed_4 NUMERIC,
+  wind_speed_5 NUMERIC, wind_speed_6 NUMERIC,
+  wind_speed_7 NUMERIC, wind_speed_8 NUMERIC,
+  memo TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+6. プロジェクトディレクトリ構成
+code
+Code
+.
+├── /app/
+│   ├── /dashboard/
+│   │   ├── /[date]/
+│   │   │   └── page.tsx         # ダッシュボード本体 (サーバーコンポーネント)
+│   │   └── /import/
+│   │       └── page.tsx         # 一括インポートページ (クライアントコンポーネント)
+│   └── /print/
+│       ├── /[date]/
+│       │   ├── PrintPageClient.tsx # 印刷プレビュー (クライアントコンポーネント)
+│       │   └── page.tsx         # 印刷データ取得 (サーバーコンポーネント)
+│       ├── layout.tsx           # 印刷専用のミニマルなレイアウト
+│       └── print.css            # 印刷専用のスタイルシート
+│   ├── globals.css              # グローバルスタイル
+│   └── layout.tsx               # アプリケーション全体のルートレイアウト
+├── /src/
+│   ├── /components/
+│   │   ├── /ui/                   # Shadcn/uiのコンポーネント群 (Button, Table, etc.)
+│   │   │   └── Combobox.tsx     # カスタムコンボボックス
+│   │   ├── DashboardClient.tsx    # ダッシュボードの主要UI (クライアントコンポーネント)
+│   │   ├── DashboardHeader.tsx    # 日時情報ヘッダー
+│   │   ├── DateNavigator.tsx      # 日付遷移ボタン
+│   │   ├── DateTimePicker.tsx     # カスタム日時ピッカー
+│   │   ├── EditDailyReportDialog.tsx # 日時情報編集モーダル
+│   │   ├── EditScheduleDialog.tsx   # 船舶予定編集モーダル
+│   │   ├── GanttChart.tsx         # 船舶図 (ガントチャート)
+│   │   ├── MemoEdit.tsx           # メモ編集コンポーネント
+│   │   └── ScheduleTable.tsx      # 荷役予定詳細テーブル
+│   ├── /lib/
+│   │   ├── /supabase/
+│   │   │   ├── actions.ts       # サーバーアクション (DB操作の関数群)
+│   │   │   └── server.ts        # サーバーサイド用Supabaseクライアント
+│   │   ├── constants.ts         # 定数や選択肢データ (荷役会社など)
+│   │   └── parser.ts            # テキスト解析ロジック
+│   └── /types/
+│       └── database.types.ts    # Supabaseから自動生成された型定義
+├── next.config.js
+└── package.json

@@ -106,20 +106,20 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
       <Table>
         <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead style={{ width: isPrintView ? '4%' : '80px' }}>岸壁</TableHead>
-              <TableHead style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>着岸時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>離岸時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>方向</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>おもて</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>とも</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>荷役開始</TableHead>
-              <TableHead style={{ width: isPrintView ? '3%' : '' }}>G</TableHead>
-              <TableHead style={{ width: isPrintView ? '8%' : '' }}>使用GC</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
-              <TableHead style={{ width: isPrintView ? '8%' : '' }}>GC運転</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>プランナ</TableHead>
-              <TableHead style={{ width: isPrintView ? '12%' : '' }}>備考</TableHead>
+              <TableHead style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
+              <TableHead style={{ width: isPrintView ? '18%' : '200px' }}>船名</TableHead>
+              <TableHead style={{ width: isPrintView ? '4%' : '' }}>着岸時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '4%' : '' }}>離岸時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>おもて</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>とも</TableHead>
+              <TableHead style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
+              <TableHead style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
+              <TableHead style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
+              <TableHead style={{ width: isPrintView ? '3%' : '' }}>本数</TableHead>
+              <TableHead style={{ width: isPrintView ? '4%' : '' }}>GC 運転</TableHead>
+              <TableHead style={{ width: isPrintView ? '4%' : '' }}>プラ ンナ</TableHead>
+              <TableHead style={{ width: isPrintView ? '30%' : '' }}>備考</TableHead>
               {/* {!isPrintView && <TableHead className="w-[80px]">操作</TableHead>} */}
               {!isPrintView && <TableHead className="w-[80px]"></TableHead>}
             </TableRow>
@@ -143,7 +143,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 onClick={() => onScheduleClick(schedule)}
               >
                   <TableCell>{schedule.berth_number}</TableCell>
-                  <TableCell className="font-medium">{schedule.ship_name}</TableCell>
+                  <TableCell >{schedule.ship_name}</TableCell>
                   <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
                   <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
                   <TableCell>
@@ -164,7 +164,9 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell>{schedule.planner_company || '-'}</TableCell>
-                  <TableCell className="whitespace-pre-line">{schedule.remarks || ''}</TableCell>
+                  <TableCell className="whitespace-pre-wrap align-middle">
+                    {schedule.remarks || ''}
+                  </TableCell>
                   {/* 4. isPrintViewがfalseの場合のみ「操作」セルを表示 */}
                   {!isPrintView && (
                     <TableCell>

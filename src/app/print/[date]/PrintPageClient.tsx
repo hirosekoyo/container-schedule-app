@@ -3,9 +3,9 @@
 import DashboardHeader from '@/components/DashboardHeader';
 import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
+import { MemoEdit } from '@/components/MemoEdit';
 import { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useEffect } from 'react';
-import { MemoEdit } from '@/components/MemoEdit';
 
 interface PrintPageClientProps {
   date: string;
@@ -14,7 +14,6 @@ interface PrintPageClientProps {
 }
 
 export function PrintPageClient({ date, report, schedules }: PrintPageClientProps) {
-  
   useEffect(() => {
     const timer = setTimeout(() => window.print(), 1000);
     const handleAfterPrint = () => window.close();
@@ -25,17 +24,15 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
     };
   }, []);
 
-  // 印刷時のガントチャートの固定幅
-  // A4横幅(約19cm)からラベル幅(2rem)を引いたサイズ
-  const GANTT_PRINT_WIDTH = 19 * 37.8 - 32; 
+  const GANTT_PRINT_WIDTH = (210 - 20) * 3.78 - 32;
 
   return (
     <div className="print-preview-background">
       <div className="print-outer-container">
         <div className="print-content-wrapper font-sans">
           
-          {/* 1. ヘッダー */}
-          <header style={{ flexShrink: 0 }}>
+          {/* 1. ヘッダー (gridの1行目) */}
+          <header className="print-header">
             <DashboardHeader 
               date={date}
               report={report}
@@ -43,9 +40,9 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
             />
           </header>
           
-          {/* 2. 船舶図 */}
-          <section style={{ height: '12cm', border: '1px solid #e5e7eb', marginTop: '0.5rem', padding: '0.5rem', borderRadius: '0.5rem', overflow: 'hidden' }}>
-             {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
+          {/* 2. 船舶図 (gridの2行目) */}
+          <div className="print-gantt-card">
+            {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
             <div style={{ height: 'calc(100% - 24px)', position: 'relative' }}>
               <GanttChart 
                 schedules={schedules} 
@@ -56,12 +53,12 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
                 printWidth={GANTT_PRINT_WIDTH}
               />
             </div>
-          </section>
+          </div>
 
-          {/* 3. 荷役予定詳細 */}
-          <section style={{ flexGrow: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>荷役予定詳細</h2> */}
-            <div style={{ flexGrow: 1, overflow: 'auto' }}> {/* 横スクロールが必要な場合はここがスクロールする */}
+          {/* 3. 荷役予定詳細 (gridの3行目) */}
+          <div className="print-table-card">
+            {/* <h2 className="text-xl font-semibold">荷役予定詳細</h2> */}
+            <div className="print-table">
               <ScheduleTable 
                 schedules={schedules} 
                 latestImportId={null}
@@ -69,17 +66,16 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
                 isPrintView={true}
               />
             </div>
-          </section>
-
-          <section style={{ flexGrow: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div className="mt-2">
-          <MemoEdit
-            initialMemo={report?.memo || null}
-            reportDate={date}
-            isPrintView={true} // 印刷モードを有効化
-          />
-        </div>
-        </section>
+          </div>
+          
+          {/* 4. メモ (gridの4行目) */}
+          <div className="print-memo-card">
+            <MemoEdit
+              initialMemo={report?.memo || null}
+              reportDate={date}
+              isPrintView={true}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -1,28 +1,24 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { updateDailyReportMemo } from '@/lib/supabase/actions';
 import { useRouter } from 'next/navigation';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'; // Tableをインポート
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 interface MemoEditProps {
   initialMemo: string | null;
   reportDate: string;
-  isPrintView?: boolean; // 印刷モード用のpropsを追加
+  isPrintView?: boolean;
 }
 
 export function MemoEdit({ initialMemo, reportDate, isPrintView = false }: MemoEditProps) {
   const [memo, setMemo] = useState(initialMemo || '');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
-  useEffect(() => {
-    setMemo(initialMemo || '');
-  }, [initialMemo]);
-
+  
   const handleSave = () => {
     startTransition(async () => {
       const { error } = await updateDailyReportMemo(reportDate, memo);
@@ -34,7 +30,6 @@ export function MemoEdit({ initialMemo, reportDate, isPrintView = false }: MemoE
     });
   };
   
-  // --- 【ここからが新設箇所】 ---
   // 印刷用の表データを定義
   const limitData = [
     { crane: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
@@ -46,42 +41,47 @@ export function MemoEdit({ initialMemo, reportDate, isPrintView = false }: MemoE
   ];
 
   if (isPrintView) {
-    // --- 印刷専用のレイアウト ---
+    // --- 【ここからが修正箇所】 ---
     return (
-      <div className="flex gap-4">
-        {/* 左側8割: メモ */}
-        <div className="w-8/12">
-          <h3 className="text-lg font-semibold border-b mb-1">メモ</h3>
-          <p className="text-sm whitespace-pre-wrap">{initialMemo || '(メモはありません)'}</p>
+      <div className="flex flex-col h-full">
+        {/* 上段: メモ */}
+        <div className="flex-grow overflow-hidden">
+          <h3 className="text-lg font-semibold border-b mb-1 flex-shrink-0">メモ</h3>
+          <p className="text-sm whitespace-pre-wrap">{initialMemo || ''}</p>
         </div>
-        {/* 右側2割: 新しい表 */}
-        <div className="w-4/12">
-          <Table className="border text-[8pt]">
+        {/* 下段: 新しい横長の表 */}
+        <div className="flex-shrink-0 mt-2">
+          <Table className="border text-[7pt]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[30%] px-1 py-0 h-5"></TableHead>
-                <TableHead className="text-center px-1 py-0 h-5">左極限</TableHead>
-                <TableHead className="text-center px-1 py-0 h-5">右極限</TableHead>
+                <TableHead className="w-[15%] px-1 py-0 h-4 text-center"></TableHead>
+                {limitData.map(col => (
+                  <TableHead key={col.crane} className="text-center px-1 py-0 h-4">{col.crane}</TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {limitData.map(row => (
-                <TableRow key={row.crane}>
-                  <TableCell className="font-semibold px-1 py-0 h-5">{row.crane}</TableCell>
-                  <TableCell className="text-center px-1 py-0 h-5">{row.right}</TableCell>
-                  <TableCell className="text-center px-1 py-0 h-5">{row.left}</TableCell>
-                </TableRow>
-              ))}
+              <TableRow>
+                <TableCell className="font-semibold text-center px-1 py-0 h-4">左極限</TableCell>
+                {limitData.map(col => (
+                  <TableCell key={`${col.crane}-right`} className="text-center px-1 py-0 h-4 whitespace-pre-wrap">{col.right}</TableCell>
+                ))}
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-semibold text-center px-1 py-0 h-4">右極限</TableCell>
+                {limitData.map(col => (
+                  <TableCell key={`${col.crane}-left`} className="text-center px-1 py-0 h-4 whitespace-pre-wrap">{col.left}</TableCell>
+                ))}
+              </TableRow>
             </TableBody>
           </Table>
         </div>
       </div>
     );
+    // --- 【ここまで】 ---
   }
-  // --- 【ここまで】 ---
 
-
-  // --- 通常表示のレイアウト ---
+  // --- 通常表示のレイアウト (変更なし) ---
   return (
     <div className="rounded-lg border bg-white p-4 shadow-sm">
       <div className="space-y-2">

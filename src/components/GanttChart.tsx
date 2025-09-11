@@ -48,23 +48,18 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
   
   const graphAreaRef = useRef<HTMLDivElement>(null);
   const [graphAreaWidth, setGraphAreaWidth] = useState(0);
-  
-useEffect(() => {
-    if (isPrintView && printWidth && printWidth > 0) {
-      // 印刷時はpropsで渡された固定幅を即座にセット
-      setGraphAreaWidth(printWidth);
-      return; // ResizeObserverはセットアップしない
-    }
 
+  useEffect(() => {
+    if (isPrintView && printWidth && printWidth > 0) {
+      setGraphAreaWidth(printWidth);
+      return;
+    }
     const graphElement = graphAreaRef.current;
     if (!graphElement) return;
-
-    // 通常表示時のみResizeObserverをセットアップ
     const resizeObserver = new ResizeObserver(entries => {
       if (entries[0]) setGraphAreaWidth(entries[0].contentRect.width);
     });
     resizeObserver.observe(graphElement);
-    
     return () => resizeObserver.unobserve(graphElement);
   }, [isPrintView, printWidth]);
 
@@ -80,22 +75,29 @@ useEffect(() => {
   ];
 
   return (
-    <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '2rem 1fr' }}>
+    // --- 【ここからが修正箇所】 ---
+    // 横軸ラベル用の高さを 2rem から 3rem に変更
+    <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '3rem 1fr' }}>
       <div></div>
+      {/* 横軸ラベルのセル */}
       <div className="relative">
+        {/* ビット番号 */}
         {bitLabels.map((label, i) => (
-          <div key={`bit-label-${i}`} className="absolute -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>{label}</div>
+          <div key={`bit-label-${i}`} className="absolute bottom-0 -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>
+            {label}
+          </div>
         ))}
+        {/* クレーン止め位置 */}
         {graphAreaWidth > 0 && craneStops.map((stop) => {
             const leftPosition = (stop.position - CHART_START_BIT) * dynamicBitWidth;
-            const boxWidth = dynamicBitWidth;
+            // ボックスの幅を動的に計算 (ビット幅の80%にする)
+            const boxWidth = dynamicBitWidth * 0.8;
             return (
               <div
                 key={`crane-${stop.id}`}
-                className="absolute flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700"
+                className="absolute top-0 flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700"
                 style={{
                   left: `calc(${leftPosition}px - ${boxWidth / 2}px)`,
-                  bottom: '2.5rem',
                   width: `${boxWidth}px`,
                   height: '1.5rem',
                 }}
@@ -105,11 +107,15 @@ useEffect(() => {
             );
         })}
       </div>
+      {/* --- 【ここまで修正】 --- */}
+
+      {/* 縦軸ラベルのセル */}
       <div className="relative">
         {timeLabels.map((label, i) => (
           <div key={`time-label-${i}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
         ))}
       </div>
+      {/* グラフ本体（グリッドと船）のセル */}
       <div ref={graphAreaRef} className="relative h-full w-full">
         <div className="absolute inset-0">
           {timeLabels.map((_, i) => ( <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
