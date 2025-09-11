@@ -55,7 +55,7 @@ const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string =
   return dbTimestamp.replace(' ', 'T').substring(0, 16);
 };
 
-type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number'> & {
+type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number' | 'remarks'> & {
   arrival_time_local: string;
   departure_time_local: string;
   bow_position_notation: string;
@@ -81,6 +81,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           departure_time_local: toDatetimeLocalString(schedule.departure_time),
           bow_position_notation: metersToBitNotation(Number(schedule.bow_position_m)),
           stern_position_notation: metersToBitNotation(Number(schedule.stern_position_m)),
+          remarks: schedule.remarks,
         });
         setOperationsData(schedule.cargo_operations.map(op => ({ ...op, start_time_local: toDatetimeLocalString(op.start_time) })));
       } else { // --- 新規作成モード ---
@@ -94,6 +95,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           departure_time_local: initialTime,
           bow_position_notation: '',
           stern_position_notation: '',
+          remarks: '',
         });
         setOperationsData([]);
       }
@@ -143,6 +145,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       bow_position_m: bow_m,
       stern_position_m: stern_m,
       planner_company: scheduleData.planner_company,
+      remarks: scheduleData.remarks,
     };
     const hashSource = Object.values(dataForHash).join('|');
     const newDataHash = createHash('sha256').update(hashSource).digest('hex');
@@ -152,7 +155,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       crane_names: op.crane_names,
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
-      remarks: op.remarks,
     }));
 
     if (schedule) { // --- 編集モード ---
@@ -223,6 +225,10 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
                   </Select>
               </div>
               <div><Label>プランナ</Label><Input name="planner_company" value={scheduleData?.planner_company || ''} onChange={handleScheduleChange} /></div>
+              <div className="md:col-span-4">
+              <Label>備考</Label>
+              <Textarea name="remarks" value={scheduleData?.remarks || ''} onChange={handleScheduleChange as any} />
+            </div>
             </div>
           </div>
 
@@ -239,13 +245,9 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
                   <div className="grid grid-cols-10 gap-4 items-end">
                     <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
                     <div className="col-span-2"><Label>使用GC</Label><Combobox options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.crane_names || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)} placeholder="GCを選択..." /></div>
-                    <div className="col-span-2"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
+                    <div className="col-span-1"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
                     <div className="col-span-2"><Label>GC運転</Label><Combobox options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.stevedore_company || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)} placeholder="会社を選択..." /></div>
-                  </div>
-                  {/* 2行目 */}
-                  <div className="grid grid-cols-10 gap-4 items-end">
-                    <div className="col-span-8"><Label>備考</Label><Textarea name="remarks" value={op.remarks || ''} onChange={(e) => handleOperationChange(index, e)} className="h-10" /></div>
-                    <div className="col-span-2 flex justify-end"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+                    <div className="col-span-1"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
                   </div>
                 </div>
               ))}

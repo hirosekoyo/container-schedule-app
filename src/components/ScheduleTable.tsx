@@ -129,7 +129,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               const craneNames = operations.map(op => op.crane_names ?? '-').join('\n');
               const containerCounts = operations.map(op => op.container_count ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
-              const remarks = operations.map(op => op.remarks ?? '').join('\n');
               let rowClassName = '';
               if (latestImportId) {
                 if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
@@ -164,7 +163,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell>{schedule.planner_company || '-'}</TableCell>
-                  <TableCell className="whitespace-pre-line">{remarks}</TableCell>
+                  <TableCell className="whitespace-pre-line">{schedule.remarks || ''}</TableCell>
                   {/* 4. isPrintViewがfalseの場合のみ「操作」セルを表示 */}
                   {!isPrintView && (
                     <TableCell>

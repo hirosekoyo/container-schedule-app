@@ -14,6 +14,7 @@ const REGEX_MAP = {
   sternBit: /船尾ビット\s*:?\s*(\d+)(?:([+-])(\d+)m)?/,
   agent: /代理店\s*:?\s*(.*)/,
   dateTime: /(\d{2})\/(\d{2})\s(\d{2}):(\d{2})\s*～\s*(\d{2})\/(\d{2})\s(\d{2}):(\d{2})/,
+  remarks: /備考\s*:?\s*(.*)/,
 };
 
 // --- 【ここからが新設箇所】 ---
@@ -54,6 +55,7 @@ const parseScheduleBlock = (
   const sternBitMatch = cleanedBlock.match(REGEX_MAP.sternBit);
   const agentMatch = cleanedBlock.match(REGEX_MAP.agent);
   const dateTimeMatch = cleanedBlock.match(REGEX_MAP.dateTime);
+  const remarksMatch = cleanedBlock.match(REGEX_MAP.remarks);
 
   if (!shipNameMatch || !loaMatch || !mooringMatch || !sternBitMatch || !dateTimeMatch) {
     console.warn("解析スキップ: 必須項目が不足しているブロックがありました。", { textBlock });
@@ -81,10 +83,9 @@ const parseScheduleBlock = (
     const loa_m = parseFloat(loaMatch[1]);
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
-    // --- 【ここからが修正箇所】 ---
-    // 新しいヘルパー関数を呼び出して、berth_numberを動的に決定
     const berth_number = determineBerthNumber(bow_position_m_float, stern_position_m_float);
-    // --- 【ここまで】 ---
+    const remarks = remarksMatch ? remarksMatch[1].trim() : undefined;
+    
     
     const arrivalMonth = parseInt(dateTimeMatch[1], 10);
     const arrivalDay = parseInt(dateTimeMatch[2], 10);
@@ -116,6 +117,7 @@ const parseScheduleBlock = (
       bow_position_m: Math.round(bow_position_m_float),
       stern_position_m: Math.round(stern_position_m_float),
       planner_company: planner_company,
+      remarks: remarks,
     };
 
     const hashSource = Object.values(baseScheduleData).join('|');
