@@ -5,6 +5,7 @@ import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
 import { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useEffect } from 'react';
+import { MemoEdit } from '@/components/MemoEdit';
 
 interface PrintPageClientProps {
   date: string;
@@ -69,6 +70,16 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
               />
             </div>
           </section>
+
+          <section style={{ flexGrow: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="mt-2">
+          <MemoEdit
+            initialMemo={report?.memo || null}
+            reportDate={date}
+            isPrintView={true} // 印刷モードを有効化
+          />
+        </div>
+        </section>
         </div>
       </div>
     </div>

@@ -120,7 +120,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               <TableHead style={{ width: isPrintView ? '8%' : '' }}>GC運転</TableHead>
               <TableHead style={{ width: isPrintView ? '7%' : '' }}>プランナ</TableHead>
               <TableHead style={{ width: isPrintView ? '12%' : '' }}>備考</TableHead>
-              {!isPrintView && <TableHead className="w-[80px]">操作</TableHead>}
+              {/* {!isPrintView && <TableHead className="w-[80px]">操作</TableHead>} */}
+              {!isPrintView && <TableHead className="w-[80px]"></TableHead>}
             </TableRow>
         </TableHeader>
         <TableBody>

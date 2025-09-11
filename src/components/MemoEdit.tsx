@@ -6,18 +6,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { updateDailyReportMemo } from '@/lib/supabase/actions';
 import { useRouter } from 'next/navigation';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'; // Tableをインポート
 
 interface MemoEditProps {
   initialMemo: string | null;
   reportDate: string;
+  isPrintView?: boolean; // 印刷モード用のpropsを追加
 }
 
-export function MemoEdit({ initialMemo, reportDate }: MemoEditProps) {
+export function MemoEdit({ initialMemo, reportDate, isPrintView = false }: MemoEditProps) {
   const [memo, setMemo] = useState(initialMemo || '');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // 親から渡される初期値が変更されたら、stateにも反映
   useEffect(() => {
     setMemo(initialMemo || '');
   }, [initialMemo]);
@@ -29,11 +30,58 @@ export function MemoEdit({ initialMemo, reportDate }: MemoEditProps) {
         alert(`メモの保存中にエラーが発生しました: ${error.message}`);
       } else {
         alert('メモが保存されました。');
-        // router.refresh(); // revalidatePathがサーバー側で実行されるので不要な場合が多い
       }
     });
   };
+  
+  // --- 【ここからが新設箇所】 ---
+  // 印刷用の表データを定義
+  const limitData = [
+    { crane: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
+    { crane: 'IC-2', right: '40ft:36+1\n20ft:36+4', left: '?' },
+    { crane: 'IC-3', right: 'IC-2横', left: '右脚56±00' },
+    { crane: 'IC-4', right: '左脚38±00', left: '右脚61±00' },
+    { crane: 'IC-5', right: '左脚45±00', left: '40ft:63-9\n20ft:63-6' },
+    { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-7\n20ft:64-10' },
+  ];
 
+  if (isPrintView) {
+    // --- 印刷専用のレイアウト ---
+    return (
+      <div className="flex gap-4">
+        {/* 左側8割: メモ */}
+        <div className="w-8/12">
+          <h3 className="text-lg font-semibold border-b mb-1">メモ</h3>
+          <p className="text-sm whitespace-pre-wrap">{initialMemo || '(メモはありません)'}</p>
+        </div>
+        {/* 右側2割: 新しい表 */}
+        <div className="w-4/12">
+          <Table className="border text-[8pt]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[30%] px-1 py-0 h-5"></TableHead>
+                <TableHead className="text-center px-1 py-0 h-5">左極限</TableHead>
+                <TableHead className="text-center px-1 py-0 h-5">右極限</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {limitData.map(row => (
+                <TableRow key={row.crane}>
+                  <TableCell className="font-semibold px-1 py-0 h-5">{row.crane}</TableCell>
+                  <TableCell className="text-center px-1 py-0 h-5">{row.right}</TableCell>
+                  <TableCell className="text-center px-1 py-0 h-5">{row.left}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  // --- 【ここまで】 ---
+
+
+  // --- 通常表示のレイアウト ---
   return (
     <div className="rounded-lg border bg-white p-4 shadow-sm">
       <div className="space-y-2">

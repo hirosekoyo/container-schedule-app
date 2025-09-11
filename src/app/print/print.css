@@ -50,7 +50,8 @@
   vertical-align: middle; /* テキストを上下中央揃えに */
 
   /* 2. 横スクロールバーをなくすための設定 */
-  white-space: nowrap;     /* テキストの折り返しを禁止 (これが幅の原因) */
+  /* white-space: nowrap;  */
+  /* テキストの折り返しを禁止 (これが幅の原因) */
   overflow: hidden;        /* セルの幅からはみ出したテキストを隠す */
   text-overflow: ellipsis; /* 隠れた部分を "..." で表示 */
   
