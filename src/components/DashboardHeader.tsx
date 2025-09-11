@@ -35,11 +35,6 @@ if (isPrintView) {
             <p>当直者: {report?.primary_staff || '-'}, {report?.secondary_staff || '-'}</p>
             {report?.support_staff && <p>サポート: {report.support_staff}</p>}
           </div>
-          {report?.memo && (
-            <div className="mx-2 flex-grow min-w-0">
-              <p className="whitespace-pre-wrap truncate">{report.memo}</p>
-            </div>
-          )}
           <div className="grid grid-cols-8 gap-x-1 flex-shrink-0 border rounded-md p-1">
             <WindInfo label="0-3" speed={report?.wind_speed_1} />
             <WindInfo label="3-6" speed={report?.wind_speed_2} />
@@ -71,15 +66,6 @@ if (isPrintView) {
               {report?.support_staff && <p className="text-sm text-muted-foreground">サポート: {report.support_staff}</p>}
             </div>
           </div>
-          {report?.memo && (
-            <>
-              <Separator orientation="vertical" className="h-10 hidden md:block" />
-              <div className="flex-1 min-w-[200px]">
-                <span className="text-sm text-gray-500">メモ</span>
-                <p className="text-sm whitespace-pre-wrap text-gray-800 truncate">{report.memo}</p>
-              </div>
-            </>
-          )}
           <div className="grid grid-cols-4 gap-4 rounded-md border p-2 md:grid-cols-8 ml-auto">
             <WindInfo label="0~3" speed={report?.wind_speed_1} />
             <WindInfo label="3-6" speed={report?.wind_speed_2} />

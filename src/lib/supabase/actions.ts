@@ -216,3 +216,28 @@ export async function resetScheduleData() {
 
   return { error: null };
 }
+
+/**
+ * 指定された日付の日次レポートのメモだけを更新（UPSERT）する
+ * @param report_date - 対象の日付 'YYYY-MM-DD'
+ * @param memo - 更新後のメモの内容
+ */
+export async function updateDailyReportMemo(report_date: string, memo: string) {
+  const supabase = createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('daily_reports')
+    .upsert(
+      { report_date: report_date, memo: memo },
+      { onConflict: 'report_date' } // report_dateが競合したらUPDATE
+    );
+
+  if (error) {
+    console.error("Error updating daily report memo:", error.message);
+    return { error };
+  }
+
+  // 変更をヘッダーと新しいメモコンポーネントに反映させる
+  revalidatePath("/dashboard/[date]", "page");
+  return { error: null };
+}

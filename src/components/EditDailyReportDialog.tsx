@@ -113,10 +113,6 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
               <div><Label htmlFor="wind_speed_8" className="text-xs">21-24時</Label><Input type="number" id="wind_speed_8" name="wind_speed_8" value={formData.wind_speed_8 ?? ''} onChange={handleChange} /></div>
             </div>
           </div>
-          <div>
-            <Label htmlFor="memo">メモ</Label>
-            <Textarea id="memo" name="memo" value={formData.memo ?? ''} onChange={handleChange} rows={4} placeholder="特記事項などを入力..." />
-          </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending}>{isPending ? "保存中..." : "保存"}</Button>
           </DialogFooter>

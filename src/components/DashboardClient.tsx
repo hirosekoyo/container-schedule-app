@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
 import { Printer } from 'lucide-react';
+import { MemoEdit } from '@/components/MemoEdit';
 
 interface DashboardClientProps {
   initialReport: DailyReport | null;
@@ -79,6 +80,11 @@ export function DashboardClient({
           isPrintView={isPrintView}
         />
       </div>
+
+      <MemoEdit 
+        initialMemo={initialReport?.memo || null}
+        reportDate={date}
+      />
       
       {/* 印刷時ではない場合のみ、編集モーダルをレンダリング */}
       {!isPrintView && (
