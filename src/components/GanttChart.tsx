@@ -137,12 +137,16 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             }
           }
 
+          const interactivityClasses = isPrintView 
+            ? '' // 印刷時は何もしない
+            : 'cursor-pointer hover:ring-2 hover:ring-blue-500';
+
           return (
             <div 
               key={`${schedule.id}-${schedule.schedule_date}`} 
-              className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors cursor-pointer hover:ring-2 hover:ring-blue-500 ${blockClassName}`}
+              className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors ${interactivityClasses} ${blockClassName}`}
               style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}
-              onClick={() => onScheduleClick(schedule)}
+              onClick={() => !isPrintView && onScheduleClick(schedule)} // 印刷時はonClickを無効化
             >
               {/* 船名表示部分を修正 */}
               <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm break-words px-1">

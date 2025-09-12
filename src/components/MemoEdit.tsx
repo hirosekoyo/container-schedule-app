@@ -24,8 +24,6 @@ export function MemoEdit({ initialMemo, reportDate, isPrintView = false }: MemoE
       const { error } = await updateDailyReportMemo(reportDate, memo);
       if (error) {
         alert(`メモの保存中にエラーが発生しました: ${error.message}`);
-      } else {
-        alert('メモが保存されました。');
       }
     });
   };

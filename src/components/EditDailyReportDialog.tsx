@@ -12,11 +12,8 @@ import { Textarea } from './ui/textarea';
 interface EditDailyReportDialogProps {
   report: DailyReport | null;
   report_date: string;
-  // --- 【ここからが変更点】 ---
-  // 親コンポーネントからモーダルの開閉状態を受け取る
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // --- 【ここまで】 ---
 }
 
 type DailyReportFormData = Omit<DailyReport, 'id' | 'created_at'>;
@@ -25,7 +22,7 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const [formData, setFormData] = useState<DailyReportFormData>({
+ const [formData, setFormData] = useState<DailyReportFormData>({
     report_date: report_date,
     primary_staff: '',
     secondary_staff: '',
@@ -34,9 +31,22 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
     wind_speed_5: null, wind_speed_6: null, wind_speed_7: null, wind_speed_8: null,
     memo: '',
   });
+  const [bulkWindSpeed, setBulkWindSpeed] = useState<string>('');
 
   useEffect(() => {
-    if (open) { // モーダルが開いた瞬間にデータをセット
+    if (bulkWindSpeed === '') return; // 空文字の場合は何もしない
+    const speed = Number(bulkWindSpeed);
+    if (!isNaN(speed)) {
+      setFormData(prev => ({
+        ...prev,
+        wind_speed_1: speed, wind_speed_2: speed, wind_speed_3: speed, wind_speed_4: speed,
+        wind_speed_5: speed, wind_speed_6: speed, wind_speed_7: speed, wind_speed_8: speed,
+      }));
+    }
+  }, [bulkWindSpeed]);
+
+  useEffect(() => {
+    if (open) {
       if (report) {
         setFormData({
           report_date: report.report_date,
@@ -67,6 +77,10 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
       ...prev,
       [name]: type === 'number' ? (value === '' ? null : Number(value)) : value,
     }));
+    // 個別の風速が変更されたら、一括入力欄の値をリセットする
+    if (name.startsWith('wind_speed_')) {
+      setBulkWindSpeed('');
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -74,7 +88,6 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
     startTransition(async () => {
       const { error } = await upsertDailyReport(formData);
       if (!error) {
-        alert("日次レポートが保存されました。");
         onOpenChange(false); // 親にモーダルを閉じるよう通知
         router.refresh();
       } else {
@@ -84,7 +97,6 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
   };
 
   return (
-    // DialogTriggerを削除し、openとonOpenChangeを直接Dialogに渡す
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
@@ -102,7 +114,20 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
           </div>
           <div>
             <Label>風速情報 (m/s)</Label>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-2 mt-2 rounded-md border p-4">
+            <div className="grid grid-cols-9 gap-2 mt-2 rounded-md border p-4">
+              {/* 一括入力 */}
+              <div>
+                <Label htmlFor="bulk-wind-speed" className="text-xs">一括</Label>
+                <Input 
+                  type="number" 
+                  id="bulk-wind-speed" 
+                  name="bulk-wind-speed" 
+                  value={bulkWindSpeed}
+                  onChange={(e) => setBulkWindSpeed(e.target.value)}
+                  className="font-bold" // 視覚的な区別
+                />
+              </div>
+              {/* 個別入力 */}
               <div><Label htmlFor="wind_speed_1" className="text-xs">0-3時</Label><Input type="number" id="wind_speed_1" name="wind_speed_1" value={formData.wind_speed_1 ?? ''} onChange={handleChange} /></div>
               <div><Label htmlFor="wind_speed_2" className="text-xs">3-6時</Label><Input type="number" id="wind_speed_2" name="wind_speed_2" value={formData.wind_speed_2 ?? ''} onChange={handleChange} /></div>
               <div><Label htmlFor="wind_speed_3" className="text-xs">6-9時</Label><Input type="number" id="wind_speed_3" name="wind_speed_3" value={formData.wind_speed_3 ?? ''} onChange={handleChange} /></div>

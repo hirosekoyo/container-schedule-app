@@ -21,7 +21,7 @@ export function Combobox({
   value,
   onChange,
   placeholder = "選択...",
-  searchPlaceholder = "検索または新規入力...",
+  searchPlaceholder = "フリー入力",
   emptyPlaceholder = "見つかりません",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
@@ -50,7 +50,7 @@ export function Combobox({
             onValueChange={setInputValue}
           />
           <CommandEmpty>
-            {inputValue ? `"${inputValue}" を新規追加` : emptyPlaceholder}
+            {inputValue ? `"${inputValue}" で登録` : emptyPlaceholder}
           </CommandEmpty>
           <CommandGroup>
             {options.map((option) => (
@@ -78,7 +78,7 @@ export function Combobox({
                 }}
               >
                 <Check className="mr-2 h-4 w-4 opacity-0" />
-                {`"${inputValue}" を新規追加`}
+                {`"${inputValue}" で登録`}
               </CommandItem>
             )}
           </CommandGroup>

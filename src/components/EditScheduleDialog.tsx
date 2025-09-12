@@ -121,7 +121,13 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     setScheduleData(prev => prev ? { ...prev, arrival_side: value } : null);
   };
   const addOperationRow = () => {
-    setOperationsData(prev => [...prev, { start_time_local: scheduleData?.arrival_time_local }]);
+    setOperationsData(prev => [
+      ...prev, 
+      { 
+        start_time_local: scheduleData?.arrival_time_local,
+        stevedore_company: scheduleData?.planner_company // プランナの値を初期値としてセット
+      }
+    ]);
   };
   const removeOperationRow = (index: number) => {
     setOperationsData(prev => prev.filter((_, i) => i !== index));
@@ -182,7 +188,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       startTransition(async () => {
         // @ts-ignore
         const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
-        if (!error) { alert("予定が更新されました。"); onOpenChange(false); router.refresh(); }
+        if (!error) {onOpenChange(false); router.refresh(); }
         else { alert(`更新中にエラーが発生しました: ${error.message}`); }
       });
     } else { // --- 新規作成モード ---
@@ -253,7 +259,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h3 className="text-lg font-semibold">荷役作業</h3>
-              <Button type="button" size="sm" variant="outline" onClick={addOperationRow}><PlusCircle className="mr-2 h-4 w-4" />作業行を追加</Button>
+              <Button type="button" size="sm" variant="outline" onClick={addOperationRow}><PlusCircle className="mr-2 h-4 w-4" />作業を追加</Button>
             </div>
             <div className="space-y-4">
               {operationsData.map((op, index) => (

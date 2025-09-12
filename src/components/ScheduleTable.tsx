@@ -96,7 +96,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
       startTransition(async () => {
         const { error } = await deleteSchedule(scheduleId);
         if (error) { alert(`削除中にエラーが発生しました: ${error.message}`); } 
-        else { alert('予定が削除されました。'); }
       });
     }
   };
@@ -121,15 +120,15 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
             <TableRow>
               <TableHead style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
               <TableHead style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>着岸時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>離岸時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
               <TableHead style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
               <TableHead style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
               <TableHead style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
               <TableHead style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
               <TableHead style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
               <TableHead style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
-              <TableHead style={{ width: isPrintView ? '3%' : '' }}>本数</TableHead>
+              <TableHead style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
               <TableHead style={{ width: isPrintView ? '4%' : '' }}>GC 運転</TableHead>
               <TableHead style={{ width: isPrintView ? '4%' : '' }}>プラ ンナ</TableHead>
               <TableHead style={{ width: isPrintView ? '30%' : '' }}>備考</TableHead>
@@ -162,10 +161,14 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 return changedFields.includes(fieldName) ? 'bg-yellow-100/80' : '';
               };
 
+              const interactivityClasses = isPrintView 
+                ? '' 
+                : 'cursor-pointer hover:bg-gray-100/80 transition-colors';
+
             return (
               <TableRow 
                 key={`${schedule.id}-${schedule.schedule_date}`} 
-                className={`${rowClassName} ${!isPrintView ? 'cursor-pointer hover:bg-gray-100/80 transition-colors' : ''}`}
+                className={`${rowClassName} ${interactivityClasses}`}
                 onClick={() => !isPrintView && onScheduleClick(schedule)}
               >
                   <TableCell className={getCellClass('berth_number')}>{schedule.berth_number}岸</TableCell>
@@ -175,17 +178,17 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className={getCellClass('arrival_side')}>{schedule.arrival_side === '左舷' ? '入' : '出'}</TableCell>
                   <TableCell className={getCellClass('bow_position_m')}>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
                   <TableCell className={getCellClass('stern_position_m')}>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
-                  <TableCell className="whitespace-pre-line text-center align-middle">
+                  <TableCell className="whitespace-pre-line">
                     {operations.length > 0 ? (
                       operations.map(op => (
                         <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
                       )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="text-center align-middle">{operations.length > 0 ? operations.length : '-'}</TableCell>
-                  <TableCell className="whitespace-pre-line text-center align-middle">{craneNames}</TableCell>
-                  <TableCell className="whitespace-pre-line text-center align-middle">{containerCounts}</TableCell>
-                  <TableCell className="whitespace-pre-line text-center align-middle">{stevedoreCompanies}</TableCell>
+                  <TableCell className="align-middle">{operations.length > 0 ? operations.length : '-'}</TableCell>
+                  <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
+                  <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
+                  <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
                   <TableCell className="whitespace-pre-wrap align-middle">{schedule.remarks || ''}</TableCell>
                   
