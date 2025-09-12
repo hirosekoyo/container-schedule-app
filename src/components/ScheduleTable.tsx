@@ -107,12 +107,12 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
         <TableHeader className="bg-gray-50">
             <TableRow>
               <TableHead style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
-              <TableHead style={{ width: isPrintView ? '18%' : '200px' }}>船名</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>着岸時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>離岸時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>着岸時間</TableHead>
+              <TableHead style={{ width: isPrintView ? '5%' : '' }}>離岸時間</TableHead>
               <TableHead style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>おもて</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>とも</TableHead>
+              <TableHead style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
+              <TableHead style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
               <TableHead style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
               <TableHead style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
               <TableHead style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>

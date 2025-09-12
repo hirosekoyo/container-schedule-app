@@ -10,7 +10,6 @@ import { ScheduleWithOperations, OperationInsert, ScheduleInsert, updateSchedule
 import { useRouter } from 'next/navigation';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
-import { createHash } from 'crypto';
 import { DateTimePicker } from './DateTimePicker';
 import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants'; 
 import { Combobox } from './ui/Combobox';
@@ -128,7 +127,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     setOperationsData(prev => prev.filter((_, i) => i !== index));
   };
 
-   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!scheduleData) return;
     const bow_m = bitNotationToMeters(scheduleData.bow_position_notation);
@@ -136,19 +135,40 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     if (bow_m === null || stern_m === null) { alert('位置の形式が不正です'); return; }
     if (!scheduleData.arrival_time_local || !scheduleData.departure_time_local) { alert('時間は必須です'); return; }
 
+    const formatForDB = (localString: string) => {
+      if (!localString) return '';
+      return `${localString.replace('T', ' ')}:00`;
+    };
+
     const dataForHash = {
       ship_name: scheduleData.ship_name,
       berth_number: scheduleData.berth_number,
-      arrival_time: scheduleData.arrival_time_local,
-      departure_time: scheduleData.departure_time_local,
+      arrival_time: formatForDB(scheduleData.arrival_time_local),
+      departure_time: formatForDB(scheduleData.departure_time_local),
       arrival_side: scheduleData.arrival_side,
       bow_position_m: bow_m,
       stern_position_m: stern_m,
       planner_company: scheduleData.planner_company,
-      remarks: scheduleData.remarks,
     };
-    const hashSource = Object.values(dataForHash).join('|');
-    const newDataHash = createHash('sha256').update(hashSource).digest('hex');
+
+    const newDataHash = [
+      dataForHash.ship_name,
+      dataForHash.berth_number,
+      dataForHash.arrival_time,
+      dataForHash.departure_time,
+      dataForHash.arrival_side,
+      dataForHash.bow_position_m,
+      dataForHash.stern_position_m,
+      dataForHash.planner_company,
+    ].join('|');
+    
+    // 2. DBに保存する最終的なデータオブジェクトを作成
+    const dataToSave = {
+      ...dataForHash,
+      remarks: scheduleData.remarks, // remarks はハッシュ計算後に結合
+      data_hash: newDataHash,
+      last_import_id: latestImportId,
+    };
     
     const opsToSave = operationsData.map(op => ({
       start_time: op.start_time_local || null,
@@ -156,9 +176,9 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
     }));
+    // --- 【ここまで】 ---
 
     if (schedule) { // --- 編集モード ---
-      const dataToSave = { ...dataForHash, data_hash: newDataHash, last_import_id: latestImportId };
       startTransition(async () => {
         // @ts-ignore
         const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
@@ -166,16 +186,14 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
         else { alert(`更新中にエラーが発生しました: ${error.message}`); }
       });
     } else { // --- 新規作成モード ---
-      const dataToSave = {
-        ...dataForHash,
+      const createDataToSave = {
+        ...dataToSave,
         schedule_date: scheduleDateForNew,
-        data_hash: newDataHash,
-        last_import_id: latestImportId,
         update_flg: false,
       };
       startTransition(async () => {
         // @ts-ignore
-        const { error } = await createScheduleWithOperations(dataToSave, opsToSave);
+        const { error } = await createScheduleWithOperations(createDataToSave, opsToSave);
         if (!error) { alert("新しい予定が作成されました。"); onOpenChange(false); router.refresh(); }
         else { alert(`作成中にエラーが発生しました: ${error.message}`); }
       });

@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { ScheduleInsert } from "./supabase/actions";
 import { PLANNER_TO_STEVEDORE_MAP } from './constants';
 
@@ -14,7 +13,6 @@ const REGEX_MAP = {
   sternBit: /船尾ビット\s*:?\s*(\d+)(?:([+-])(\d+)m)?/,
   agent: /代理店\s*:?\s*(.*)/,
   dateTime: /(\d{2})\/(\d{2})\s(\d{2}):(\d{2})\s*～\s*(\d{2})\/(\d{2})\s(\d{2}):(\d{2})/,
-  remarks: /備考\s*:?\s*(.*)/,
 };
 
 // --- 【ここからが新設箇所】 ---
@@ -53,7 +51,6 @@ const parseScheduleBlock = (
   const sternBitMatch = cleanedBlock.match(REGEX_MAP.sternBit);
   const agentMatch = cleanedBlock.match(REGEX_MAP.agent);
   const dateTimeMatch = cleanedBlock.match(REGEX_MAP.dateTime);
-  const remarksMatch = cleanedBlock.match(REGEX_MAP.remarks);
 
   if (!shipNameMatch || !loaMatch || !mooringMatch || !sternBitMatch || !dateTimeMatch) {
     console.warn("解析スキップ: 必須項目が不足しているブロックがありました。", { textBlock });
@@ -65,7 +62,6 @@ const parseScheduleBlock = (
     const nameWithoutNumber = rawShipName.replace(/^\d+\s*/, '');
     const ship_name = nameWithoutNumber.replace(/◆\s*/, '').trim();
     
-    // --- 【ここからが修正箇所】 ---
     const sternMainBit = parseInt(sternBitMatch[1], 10);
     // 船尾ビットのチェックはここから削除
     
@@ -82,16 +78,13 @@ const parseScheduleBlock = (
     const loa_m = parseFloat(loaMatch[1]);
     const bow_position_m_float = arrival_side === '右舷' ? stern_position_m_float + loa_m : stern_position_m_float - loa_m;
     
-    // フィルタリングロジックを、すべての位置情報が計算された後に移動
+    // フィルタリングロジック (変更なし)
     const min_position_m = MIN_BIT_NUMBER * BIT_LENGTH_M;
     if (bow_position_m_float < min_position_m && stern_position_m_float < min_position_m) {
-      console.log(`処理対象外: 船体の両端が${MIN_BIT_NUMBER}ビット未満です。`, { ship_name });
-      return []; // 両端が範囲外ならスキップ
+      return [];
     }
-    // --- 【ここまで修正】 ---
 
     const berth_number = determineBerthNumber(bow_position_m_float, stern_position_m_float);
-    const remarks = remarksMatch ? remarksMatch[1].trim() : undefined;
     
     
     const arrivalMonth = parseInt(dateTimeMatch[1], 10);
@@ -117,18 +110,25 @@ const parseScheduleBlock = (
 
     const baseScheduleData = {
       ship_name,
-      berth_number: berth_number,
+      berth_number,
       arrival_time: formatForDB(arrivalDate),
       departure_time: formatForDB(departureDate),
       arrival_side,
       bow_position_m: Math.round(bow_position_m_float),
       stern_position_m: Math.round(stern_position_m_float),
-      planner_company: planner_company,
-      remarks: remarks,
+      planner_company,
     };
 
-    const hashSource = Object.values(baseScheduleData).join('|');
-    const data_hash = createHash('sha256').update(hashSource).digest('hex');
+    const data_hash = [
+      baseScheduleData.ship_name,
+      baseScheduleData.berth_number,
+      baseScheduleData.arrival_time,
+      baseScheduleData.departure_time,
+      baseScheduleData.arrival_side,
+      baseScheduleData.bow_position_m,
+      baseScheduleData.stern_position_m,
+      baseScheduleData.planner_company,
+    ].join('|');
 
     const schedules: ScheduleDataForDB[] = [];
     let currentDate = new Date(arrivalDate.getFullYear(), arrivalDate.getMonth(), arrivalDate.getDate());
@@ -141,6 +141,7 @@ const parseScheduleBlock = (
         data_hash,
         last_import_id: importId,
         update_flg: false,
+        remarks: null, // インポート時は常に remarks を null で作成
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
