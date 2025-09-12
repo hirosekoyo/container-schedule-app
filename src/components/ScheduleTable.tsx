@@ -4,14 +4,14 @@ import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useTransition } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from './ui/button';
-import { Trash2, PlusCircle } from 'lucide-react';
-import { deleteSchedule } from '@/lib/supabase/actions';
+import { Trash2, PlusCircle, Check } from 'lucide-react'; // 1. Checkアイコンをインポート
+import { deleteSchedule, acknowledgeScheduleChange } from '@/lib/supabase/actions'; // 2. acknowledgeScheduleChangeをインポート
 
 interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
   latestImportId: string | null;
   onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
-  isPrintView?: boolean; // 印刷表示かどうかのフラグ
+  isPrintView?: boolean;
 }
 
 const metersToBitNotation = (meters: number | null | undefined): string => {
@@ -101,6 +101,19 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
     }
   };
 
+  // --- 【ここからが新設箇所】 ---
+  // 3. 「確認」ボタンのクリックハンドラを追加
+  const handleAcknowledgeClick = (e: React.MouseEvent, scheduleId: number) => {
+    e.stopPropagation(); // 行クリックイベントの発火を防ぐ
+    startTransition(async () => {
+      const { error } = await acknowledgeScheduleChange(scheduleId);
+      if (error) {
+        alert(`確認処理中にエラーが発生しました: ${error.message}`);
+      }
+    });
+  };
+  // --- 【ここまで】 ---
+
   return (
     <div className={`w-full h-full overflow-hidden rounded-lg border ${isPrintView ? 'print-table' : ''}`}>
       <Table>
@@ -132,65 +145,87 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
               let rowClassName = '';
               if (latestImportId) {
-                if (schedule.last_import_id !== latestImportId) rowClassName = 'bg-red-100/60';
-                else if (schedule.update_flg) rowClassName = 'bg-yellow-100/60';
+                if (schedule.last_import_id !== latestImportId) {
+                  rowClassName = 'bg-red-100/60';
+                }
+                // update_flgでの行全体のハイライトは、より詳細なセルハイライトに置き換えるので削除
+                // else if (schedule.update_flg) {
+                //   rowClassName = 'bg-yellow-100/60';
+                // }
               }
+
+              // 変更されたフィールドのリストを取得
+              const changedFields = (schedule.changed_fields as string[] | null) || [];
               
+              // セルごとのハイライトクラスを生成するヘルパー関数
+              const getCellClass = (fieldName: string) => {
+                return changedFields.includes(fieldName) ? 'bg-yellow-100/80' : '';
+              };
+
             return (
               <TableRow 
                 key={`${schedule.id}-${schedule.schedule_date}`} 
-                className={`${rowClassName} cursor-pointer hover:bg-gray-100/80 transition-colors`}
-                onClick={() => onScheduleClick(schedule)}
+                className={`${rowClassName} ${!isPrintView ? 'cursor-pointer hover:bg-gray-100/80 transition-colors' : ''}`}
+                onClick={() => !isPrintView && onScheduleClick(schedule)}
               >
-                  <TableCell>{schedule.berth_number}</TableCell>
-                  <TableCell >{schedule.ship_name}</TableCell>
-                  <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
-                  <TableCell><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
-                  <TableCell>
-                    {schedule.arrival_side === '左舷' ? '入' : 
-                     schedule.arrival_side === '右舷' ? '出' : '-'}
-                  </TableCell>
-                  <TableCell>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
-                  <TableCell>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
-                  <TableCell className="whitespace-pre-line">
+                  <TableCell className={getCellClass('berth_number')}>{schedule.berth_number}岸</TableCell>
+                  <TableCell className={`font-medium ${getCellClass('ship_name')}`}>{schedule.ship_name}</TableCell>
+                  <TableCell className={getCellClass('arrival_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
+                  <TableCell className={getCellClass('departure_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
+                  <TableCell className={getCellClass('arrival_side')}>{schedule.arrival_side === '左舷' ? '入' : '出'}</TableCell>
+                  <TableCell className={getCellClass('bow_position_m')}>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
+                  <TableCell className={getCellClass('stern_position_m')}>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
+                  <TableCell className="whitespace-pre-line text-center align-middle">
                     {operations.length > 0 ? (
                       operations.map(op => (
                         <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
                       )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
                     ) : '-'}
                   </TableCell>
-                  <TableCell>{operations.length > 0 ? operations.length : '-'}</TableCell>
-                  <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
-                  <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
-                  <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
-                  <TableCell>{schedule.planner_company || '-'}</TableCell>
-                  <TableCell className="whitespace-pre-wrap align-middle">
-                    {schedule.remarks || ''}
-                  </TableCell>
-                  {/* 4. isPrintViewがfalseの場合のみ「操作」セルを表示 */}
+                  <TableCell className="text-center align-middle">{operations.length > 0 ? operations.length : '-'}</TableCell>
+                  <TableCell className="whitespace-pre-line text-center align-middle">{craneNames}</TableCell>
+                  <TableCell className="whitespace-pre-line text-center align-middle">{containerCounts}</TableCell>
+                  <TableCell className="whitespace-pre-line text-center align-middle">{stevedoreCompanies}</TableCell>
+                  <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
+                  <TableCell className="whitespace-pre-wrap align-middle">{schedule.remarks || ''}</TableCell>
+                  
                   {!isPrintView && (
-                    <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleDeleteClick(e, schedule.id, schedule.ship_name)}
-                      disabled={isPending}
-                      className="hover:bg-red-100"
-                    >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    <TableCell className="text-center align-middle">
+                      {/* --- 【ここからが修正箇所】 --- */}
+                      <div className="flex items-center justify-center gap-1">
+                        {/* 4. changed_fields にデータがある場合のみ「確認」ボタンを表示 */}
+                        {changedFields.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleAcknowledgeClick(e, schedule.id)}
+                            disabled={isPending}
+                            className="h-8 w-8 bg-yellow-100 hover:bg-yellow-200"
+                            title="変更を確認済みにしてハイライトを消す"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost" size="icon"
+                          onClick={(e) => handleDeleteClick(e, schedule.id, schedule.ship_name)}
+                          disabled={isPending} className="h-8 w-8 hover:bg-red-100"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      {/* --- 【ここまで】 --- */}
                     </TableCell>
                   )}
               </TableRow>
             );
           })}
-          {/* 5. isPrintViewがfalseの場合のみ「新規作成行」を表示 */}
           {!isPrintView && (
             <TableRow 
               className="cursor-pointer hover:bg-green-50"
               onClick={() => onScheduleClick(null)}
             >
-              <TableCell colSpan={14} className="text-center text-green-600 font-semibold">
+              <TableCell colSpan={isPrintView ? 14 : 15} className="text-center text-green-600 font-semibold">
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>新規追加</span>

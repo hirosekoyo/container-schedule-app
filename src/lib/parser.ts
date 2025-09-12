@@ -140,7 +140,6 @@ const parseScheduleBlock = (
         schedule_date: `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`,
         data_hash,
         last_import_id: importId,
-        update_flg: false,
         remarks: null, // インポート時は常に remarks を null で作成
       });
       currentDate.setDate(currentDate.getDate() + 1);

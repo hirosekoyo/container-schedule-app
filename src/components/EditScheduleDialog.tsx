@@ -189,7 +189,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       const createDataToSave = {
         ...dataToSave,
         schedule_date: scheduleDateForNew,
-        update_flg: false,
       };
       startTransition(async () => {
         // @ts-ignore

@@ -157,7 +157,7 @@ export async function deleteSchedule(scheduleId: number) {
  */
 export async function updateScheduleWithOperations(
   scheduleId: number,
-  scheduleData: Omit<ScheduleInsert, "id" | "created_at" | "schedule_date" | "last_import_id" | "data_hash" | "update_flg" >,
+  scheduleData: Omit<ScheduleInsert, "id" | "created_at" | "schedule_date" | "last_import_id" | "data_hash" >,
   operationsData: Omit<OperationInsert, "id" | "created_at" | "schedule_id">[]
 ) {
   const supabase = createSupabaseServerClient();
@@ -239,5 +239,26 @@ export async function updateDailyReportMemo(report_date: string, memo: string) {
 
   // 変更をヘッダーと新しいメモコンポーネントに反映させる
   revalidatePath("/dashboard/[date]", "page");
+  return { error: null };
+}
+
+/**
+ * 指定されたスケジュールの変更確認フラグ（changed_fields）をリセットする
+ * @param scheduleId 対象のスケジュールID
+ */
+export async function acknowledgeScheduleChange(scheduleId: number) {
+  const supabase = createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('schedules')
+    .update({ changed_fields: null })
+    .eq('id', scheduleId);
+
+  if (error) {
+    console.error("Error acknowledging schedule change:", error.message);
+    return { error };
+  }
+
+  revalidatePath("/dashboard", "layout");
   return { error: null };
 }

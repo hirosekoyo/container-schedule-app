@@ -7,7 +7,7 @@ interface GanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
   latestImportId: string | null;
-  onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
+  onScheduleClick: (schedule: ScheduleWithOperations) => void;
   isPrintView?: boolean;
   printWidth?: number;
 }
@@ -75,22 +75,16 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
   ];
 
   return (
-    // --- 【ここからが修正箇所】 ---
-    // 横軸ラベル用の高さを 2rem から 3rem に変更
     <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '3rem 1fr' }}>
       <div></div>
-      {/* 横軸ラベルのセル */}
       <div className="relative">
-        {/* ビット番号 */}
         {bitLabels.map((label, i) => (
           <div key={`bit-label-${i}`} className="absolute bottom-0 -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>
             {label}
           </div>
         ))}
-        {/* クレーン止め位置 */}
         {graphAreaWidth > 0 && craneStops.map((stop) => {
             const leftPosition = (stop.position - CHART_START_BIT) * dynamicBitWidth;
-            // ボックスの幅を動的に計算 (ビット幅の80%にする)
             const boxWidth = dynamicBitWidth * 0.8;
             return (
               <div
@@ -107,15 +101,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             );
         })}
       </div>
-      {/* --- 【ここまで修正】 --- */}
-
-      {/* 縦軸ラベルのセル */}
       <div className="relative">
         {timeLabels.map((label, i) => (
           <div key={`time-label-${i}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
         ))}
       </div>
-      {/* グラフ本体（グリッドと船）のセル */}
       <div ref={graphAreaRef} className="relative h-full w-full">
         <div className="absolute inset-0">
           {timeLabels.map((_, i) => ( <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
@@ -135,14 +125,18 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
           const width_m = right_m - left_m;
           const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * dynamicBitWidth;
           const width = (width_m / BIT_LENGTH_M) * dynamicBitWidth;
+          
+          // --- 【ここからが修正箇所】 ---
+          const changedFields = (schedule.changed_fields as string[] | null) || [];
           let blockClassName = 'bg-sky-100 text-sky-800';
           if (latestImportId) {
             if (schedule.last_import_id !== latestImportId) {
               blockClassName = 'bg-red-200/80 text-red-900 ring-1 ring-red-500';
-            } else if (schedule.update_flg) {
+            } else if (changedFields.length > 0) {
               blockClassName = 'bg-yellow-200/80 text-yellow-900 ring-1 ring-yellow-500';
             }
           }
+
           return (
             <div 
               key={`${schedule.id}-${schedule.schedule_date}`} 
@@ -150,13 +144,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
               style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}
               onClick={() => onScheduleClick(schedule)}
             >
-              <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm">
-                {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="truncate">{schedule.ship_name}</span></> ) : 
-                 schedule.arrival_side === '右舷' ? ( <><span className="truncate">{schedule.ship_name}</span><span>→</span></> ) : 
-                 ( <span className="truncate">{schedule.ship_name}</span> )}
+              {/* 船名表示部分を修正 */}
+              <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm break-words px-1">
+                {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="text-center">{schedule.ship_name}</span></> ) : 
+                 schedule.arrival_side === '右舷' ? ( <><span className="text-center">{schedule.ship_name}</span><span>→</span></> ) : 
+                 ( <span className="text-center">{schedule.ship_name}</span> )}
               </div>
             </div>
           );
+          // --- 【ここまで修正】 ---
         })}
       </div>
     </div>
