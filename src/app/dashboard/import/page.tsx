@@ -92,7 +92,7 @@ export default function ImportPage() {
         </div>
         {/* --- 【ここからが修正箇所】 --- */}
         <Button onClick={() => router.push(`/dashboard/${tomorrowDateString}`)}>
-          ダッシュボードに戻る
+          明日の動静表
         </Button>
         {/* --- 【ここまで】 --- */}
       </div>

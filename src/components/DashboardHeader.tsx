@@ -3,7 +3,7 @@
 import { EditDailyReportDialog } from './EditDailyReportDialog';
 import { DailyReport } from '@/lib/supabase/actions';
 import React, { useState } from 'react';
-import { Separator } from './ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 interface DashboardHeaderProps {
   date: string;
@@ -11,77 +11,101 @@ interface DashboardHeaderProps {
   isPrintView?: boolean;
 }
 
-const WindInfo: React.FC<{ label: string; speed: number | null | undefined }> = ({ label, speed }) => (
-  <div className="flex flex-col items-center">
-    <span className="text-[8pt] text-gray-500">{label}</span>
-    <span className="text-sm font-semibold">{speed ?? '-'}</span>
-  </div>
-);
-
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrintView = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const displayDate = new Date(date).toLocaleDateString('ja-JP', {
+  const displayDate = new Date(date).toLocaleString('ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
+  
+  const windSpeeds = [
+    { label: '0〜', value: report?.wind_speed_1 }, { label: '3〜', value: report?.wind_speed_2 },
+    { label: '6〜', value: report?.wind_speed_3 }, { label: '9〜', value: report?.wind_speed_4 },
+    { label: '12〜', value: report?.wind_speed_5 }, { label: '15〜', value: report?.wind_speed_6 },
+    { label: '18〜', value: report?.wind_speed_7 }, { label: '21〜', value: report?.wind_speed_8 },
+  ];
 
   if (isPrintView) {
+    // --- 印刷表示のレイアウト ---
     return (
-      <div className="text-xs font-sans"> 
-        <div className="flex justify-between items-center gap-4"> {/* items-start -> items-center */}
-          
-          {/* --- 【ここからが修正箇所】 --- */}
-          {/* 日付と当直者をflexで囲む */}
-          <div className="flex items-center gap-4">
-            <h1 className="text-base font-bold">{displayDate}</h1>
+      <div className="flex justify-between items-center gap-4 text-xs font-sans">
+        <div className="flex items-end gap-4">
+          <h1 className="text-lg font-bold">{displayDate}</h1>
+          <div>
+            <span className="text-[9pt] text-gray-500">当直</span>
+            <p className="font-semibold text-sm">{report?.primary_staff || '-'}  {report?.secondary_staff || '-'}</p>
+          </div>
+          {report?.support_staff && (
             <div>
-              <span className="text-[9pt] text-gray-500">当直者</span>
-              <p className="font-semibold">{report?.primary_staff || '-'}, {report?.secondary_staff || '-'}</p>
-              {report?.support_staff && <p className="text-xs text-gray-600">サポート: {report.support_staff}</p>}
+              <span className="text-[9pt] text-gray-500">S</span>
+              <p className="font-semibold text-sm">{report.support_staff}</p>
             </div>
-          </div>
-          {/* --- 【ここまで】 --- */}
-
-          <div className="grid grid-cols-8 gap-x-1 flex-shrink-0 border rounded-md p-1">
-            <WindInfo label="0〜" speed={report?.wind_speed_1} />
-            <WindInfo label="3〜" speed={report?.wind_speed_2} />
-            <WindInfo label="6〜" speed={report?.wind_speed_3} />
-            <WindInfo label="9〜" speed={report?.wind_speed_4} />
-            <WindInfo label="12〜" speed={report?.wind_speed_5} />
-            <WindInfo label="15〜" speed={report?.wind_speed_6} />
-            <WindInfo label="18〜" speed={report?.wind_speed_7} />
-            <WindInfo label="21〜" speed={report?.wind_speed_8} />
-          </div>
+          )}
+        </div>
+        <div className="w-1/2 flex-shrink-0">
+          <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center h-5 px-1 py-0 border-r" style={{ width: '12%' }}>時間</TableHead>
+                {windSpeeds.map(ws => <TableHead key={ws.label} className="text-center h-5 px-1 py-0 border-r" style={{ width: '11%' }}>{ws.label}</TableHead>)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '12%' }}>風速</TableHead>
+                {windSpeeds.map(ws => <TableCell key={ws.label} className="text-center h-5 px-1 py-0 font-semibold border-r" style={{ width: '11%' }}>{ws.value ?? '-'}</TableCell>)}
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </div>
     );
   }
 
-  // --- 通常表示のレイアウト (変更なし) ---
+  // --- 通常表示のレイアウト ---
   return (
     <>
       <div 
         className="rounded-lg border bg-white p-4 shadow-sm hover:bg-gray-50 cursor-pointer transition-colors font-sans"
         onClick={() => setIsModalOpen(true)}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-          <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-bold">{displayDate}</h1>
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex-1 flex items-end gap-6">
+            <h1 className="text-3xl font-bold">{displayDate}</h1>
             <div>
-              <span className="text-sm text-gray-500">当直者</span>
-              <p className="text-lg">{report?.primary_staff || '未設定'}, {report?.secondary_staff || '未設定'}</p>
-              {report?.support_staff && <p className="text-sm text-muted-foreground">サポート: {report.support_staff}</p>}
+              <span className="text-sm text-gray-500">当直</span>
+              <p className="text-xl font-semibold">{report?.primary_staff || '未設定'}  {report?.secondary_staff || '未設定'}</p>
             </div>
+            {report?.support_staff && (
+              <div>
+                <span className="text-sm text-gray-500">S</span>
+                <p className="text-xl font-semibold">{report.support_staff}</p>
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-4 gap-4 rounded-md border p-2 md:grid-cols-8 ml-auto">
-            <WindInfo label="0〜" speed={report?.wind_speed_1} />
-            <WindInfo label="3〜" speed={report?.wind_speed_2} />
-            <WindInfo label="6〜" speed={report?.wind_speed_3} />
-            <WindInfo label="9〜" speed={report?.wind_speed_4} />
-            <WindInfo label="12〜" speed={report?.wind_speed_5} />
-            <WindInfo label="15〜" speed={report?.wind_speed_6} />
-            <WindInfo label="18〜" speed={report?.wind_speed_7} />
-            <WindInfo label="21〜" speed={report?.wind_speed_8} />
+          <div className="w-1/2">
+            <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-center text-xs h-6 border-r" style={{ width: '12%' }}>時間</TableHead>
+                  {windSpeeds.map(ws => (
+                    <TableHead key={ws.label} className="text-center text-xs h-6 border-r" style={{ width: '11%' }}>
+                      {ws.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableHead className="text-center font-semibold border-r">風速</TableHead>
+                  {windSpeeds.map(ws => (
+                    <TableCell key={ws.label} className="text-center text-xl font-semibold border-r">
+                      {ws.value ?? '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>
