@@ -4,8 +4,9 @@ import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useTransition } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from './ui/button';
-import { Trash2, PlusCircle, Check } from 'lucide-react'; // 1. Checkアイコンをインポート
-import { deleteSchedule, acknowledgeScheduleChange } from '@/lib/supabase/actions'; // 2. acknowledgeScheduleChangeをインポート
+import { Trash2, PlusCircle, Check } from 'lucide-react';
+import { deleteSchedule, acknowledgeScheduleChange } from '@/lib/supabase/actions';
+import { metersToBitNotation } from '@/lib/coordinateConverter'; // 1. 新しいコンバーターをインポート
 
 interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
@@ -14,19 +15,8 @@ interface ScheduleTableProps {
   isPrintView?: boolean;
 }
 
-const metersToBitNotation = (meters: number | null | undefined): string => {
-  if (meters === null || meters === undefined || isNaN(meters)) return '-';
-  const BIT_LENGTH_M = 30;
-  let baseBit = Math.floor(meters / BIT_LENGTH_M);
-  let remainderMeters = Math.round(meters - (baseBit * BIT_LENGTH_M));
-  if (remainderMeters >= 16) {
-    baseBit += 1;
-    remainderMeters -= BIT_LENGTH_M;
-  }
-  const sign = remainderMeters >= 0 ? '+' : '-';
-  const absRemainder = Math.abs(remainderMeters);
-  return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
-};
+// --- 2. ローカルの metersToBitNotation 関数を削除 ---
+
 /**
  * 着岸・離岸時間用の2段表示コンポーネント
  */
@@ -95,15 +85,13 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
     if (window.confirm(`「${shipName}」の予定を削除しますか？`)) {
       startTransition(async () => {
         const { error } = await deleteSchedule(scheduleId);
-        if (error) { alert(`削除中にエラーが発生しました: ${error.message}`); } 
+        if (error) { alert(`削除中にエラーが発生しました: ${error.message}`); }
       });
     }
   };
 
-  // --- 【ここからが新設箇所】 ---
-  // 3. 「確認」ボタンのクリックハンドラを追加
   const handleAcknowledgeClick = (e: React.MouseEvent, scheduleId: number) => {
-    e.stopPropagation(); // 行クリックイベントの発火を防ぐ
+    e.stopPropagation();
     startTransition(async () => {
       const { error } = await acknowledgeScheduleChange(scheduleId);
       if (error) {
@@ -111,7 +99,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
       }
     });
   };
-  // --- 【ここまで】 ---
 
   return (
     <div className={`w-full h-full overflow-hidden rounded-lg border ${isPrintView ? 'print-table' : ''}`}>
@@ -152,11 +139,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 //   rowClassName = 'bg-yellow-100/60';
                 // }
               }
-
-              // 変更されたフィールドのリストを取得
               const changedFields = (schedule.changed_fields as string[] | null) || [];
-              
-              // セルごとのハイライトクラスを生成するヘルパー関数
               const getCellClass = (fieldName: string) => {
                 return changedFields.includes(fieldName) ? 'bg-yellow-100/80' : '';
               };
@@ -194,9 +177,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   
                   {!isPrintView && (
                     <TableCell className="text-center align-middle">
-                      {/* --- 【ここからが修正箇所】 --- */}
                       <div className="flex items-center justify-center gap-1">
-                        {/* 4. changed_fields にデータがある場合のみ「確認」ボタンを表示 */}
                         {changedFields.length > 0 && (
                           <Button
                             variant="outline"
@@ -217,7 +198,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
-                      {/* --- 【ここまで】 --- */}
                     </TableCell>
                   )}
               </TableRow>

@@ -2,6 +2,7 @@
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useEffect, useRef } from 'react';
+import { metersToBitPosition, bitNotationToMeters } from '@/lib/coordinateConverter';
 
 interface GanttChartProps {
   schedules: ScheduleWithOperations[];
@@ -16,7 +17,6 @@ const CHART_END_HOUR = 26;
 const TOTAL_CHART_HOURS = CHART_END_HOUR - CHART_START_HOUR;
 const CHART_START_BIT = 33;
 const CHART_END_BIT = 64;
-const BIT_LENGTH_M = 30;
 
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
   const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
@@ -114,19 +114,41 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
         {graphAreaWidth > 0 && schedules.map((schedule) => {
           const { startHour, endHour } = calculateBarRange(schedule, baseDate);
           if (endHour <= startHour) return null;
+
           const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
           const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
+          
           const bow_m = Number(schedule.bow_position_m);
           const stern_m = Number(schedule.stern_position_m);
-          const chartStart_m = CHART_START_BIT * BIT_LENGTH_M;
-          let left_m = Math.min(bow_m, stern_m);
-          let right_m = Math.max(bow_m, stern_m);
-          if (left_m < chartStart_m) { left_m = chartStart_m; }
-          const width_m = right_m - left_m;
-          const left = ((left_m / BIT_LENGTH_M) - CHART_START_BIT) * dynamicBitWidth;
-          const width = (width_m / BIT_LENGTH_M) * dynamicBitWidth;
           
-          // --- 【ここからが修正箇所】 ---
+          const chartStart_m = bitNotationToMeters(`${CHART_START_BIT}`)!; // 33bitのメートル位置
+          const chartEnd_m = bitNotationToMeters(`${CHART_END_BIT + 1}`)!; // 65bitのメートル位置
+
+          // 船の右端がグラフの開始位置より左にある場合は、描画をスキップ
+          if (Math.max(bow_m, stern_m) < chartStart_m) {
+            return null;
+          }
+          
+          // 船の左端を描画範囲内に補正
+          let left_m = Math.min(bow_m, stern_m);
+          if (left_m < chartStart_m) {
+            left_m = chartStart_m;
+          }
+          // 船の右端も描画範囲内に補正
+          let right_m = Math.max(bow_m, stern_m);
+          if (right_m > chartEnd_m) {
+            right_m = chartEnd_m;
+          }
+
+          const width_m = right_m - left_m;
+          if (width_m <= 0) return null; // 幅がなければ描画しない
+          
+          const left_bit = metersToBitPosition(left_m);
+          const right_bit = metersToBitPosition(right_m);
+          
+          const left = (left_bit - CHART_START_BIT) * dynamicBitWidth;
+          const width = (right_bit - left_bit) * dynamicBitWidth;
+
           const changedFields = (schedule.changed_fields as string[] | null) || [];
           let blockClassName = 'bg-sky-100 text-sky-800';
           if (latestImportId) {
@@ -136,19 +158,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
               blockClassName = 'bg-yellow-200/80 text-yellow-900 ring-1 ring-yellow-500';
             }
           }
-
-          const interactivityClasses = isPrintView 
-            ? '' // 印刷時は何もしない
-            : 'cursor-pointer hover:ring-2 hover:ring-blue-500';
+          const interactivityClasses = isPrintView ? '' : 'cursor-pointer hover:ring-2 hover:ring-blue-500';
 
           return (
             <div 
               key={`${schedule.id}-${schedule.schedule_date}`} 
               className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors ${interactivityClasses} ${blockClassName}`}
               style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}
-              onClick={() => !isPrintView && onScheduleClick(schedule)} // 印刷時はonClickを無効化
+              onClick={() => !isPrintView && onScheduleClick(schedule)}
             >
-              {/* 船名表示部分を修正 */}
               <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm break-words px-1">
                 {schedule.arrival_side === '左舷' ? ( <><span>←</span><span className="text-center">{schedule.ship_name}</span></> ) : 
                  schedule.arrival_side === '右舷' ? ( <><span className="text-center">{schedule.ship_name}</span><span>→</span></> ) : 
@@ -156,7 +174,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
               </div>
             </div>
           );
-          // --- 【ここまで修正】 ---
         })}
       </div>
     </div>

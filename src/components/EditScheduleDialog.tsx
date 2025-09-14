@@ -13,6 +13,7 @@ import { Textarea } from './ui/textarea';
 import { DateTimePicker } from './DateTimePicker';
 import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants'; 
 import { Combobox } from './ui/Combobox';
+import { metersToBitNotation } from '@/lib/coordinateConverter';
 
 interface EditScheduleDialogProps {
   schedule: ScheduleWithOperations | null;
@@ -22,7 +23,6 @@ interface EditScheduleDialogProps {
   latestImportId: string | null;
 }
 
-// --- 【ここからが修正箇所】 ---
 // ヘルパー関数に、前回のコードから省略されていた本体を正しく記述
 const bitNotationToMeters = (notation: string): number | null => {
   const match = notation.match(/^(\d+)([+-])(\d+)$/);
@@ -33,21 +33,6 @@ const bitNotationToMeters = (notation: string): number | null => {
   if (sign === '+') meters += remainder; else if (sign === '-') meters -= remainder;
   return meters;
 };
-
-const metersToBitNotation = (meters: number | null | undefined): string => {
-  if (meters === null || meters === undefined || isNaN(meters)) return '';
-  const BIT_LENGTH_M = 30;
-  let baseBit = Math.floor(meters / BIT_LENGTH_M);
-  let remainderMeters = Math.round(meters - (baseBit * BIT_LENGTH_M));
-  if (remainderMeters >= 16) {
-    baseBit += 1;
-    remainderMeters -= BIT_LENGTH_M;
-  }
-  const sign = remainderMeters >= 0 ? '+' : '-';
-  const absRemainder = Math.abs(remainderMeters);
-  return `${baseBit}${sign}${String(absRemainder).padStart(2, '0')}`;
-};
-// --- 【ここまで】 ---
 
 const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string => {
   if (!dbTimestamp) return '';
@@ -158,14 +143,12 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     };
 
     const newDataHash = [
-      dataForHash.ship_name,
       dataForHash.berth_number,
       dataForHash.arrival_time,
       dataForHash.departure_time,
       dataForHash.arrival_side,
       dataForHash.bow_position_m,
       dataForHash.stern_position_m,
-      dataForHash.planner_company,
     ].join('|');
     
     // 2. DBに保存する最終的なデータオブジェクトを作成

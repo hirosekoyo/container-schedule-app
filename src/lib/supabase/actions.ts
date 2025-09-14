@@ -62,7 +62,8 @@ export async function upsertDailyReport(reportData: DailyReportInsert) {
  * 4. 複数の船舶スケジュールを一括でインポート（高度なUPSERT）する
  */
 export async function importMultipleSchedules(
-  schedulesData: ScheduleDataForDB[]
+  // 引数の型を ScheduleInsert のサブセットにすることで、型の安全性を高める
+  schedulesData: Omit<ScheduleInsert, 'id' | 'created_at'>[]
 ) {
   if (!schedulesData || schedulesData.length === 0) {
     return { data: null, error: { message: "登録するデータがありません。" } };
@@ -70,10 +71,9 @@ export async function importMultipleSchedules(
   
   const supabase = createSupabaseServerClient();
 
-  // 型定義が更新されたため、型エラーは発生しなくなる
   const { data, error } = await supabase
     .rpc('upsert_schedules_with_check', {
-      schedules_data: schedulesData
+      schedules_data: schedulesData // 型定義が更新されたため、すべてのフィールドが正しく渡される
     });
 
   if (error) {

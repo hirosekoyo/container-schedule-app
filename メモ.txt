@@ -1,6 +1,6 @@
 忘備録
  col-spanで表示の割合を調整できる。
-
+基本的にはプラス１５メートル、マイナス１４メートルのルールなのに、たまにポートオブ博多でマイナす１５の時があり、それには対応していない。
 
 **「将来、別のAIや開発者に引き継ぐ際に、この要件定義書だけでプロジェクトを完全に再現できるか」**という観点で、要件定義書を更新してください。そして要件定義書全体を表示してください。
 
@@ -24,12 +24,25 @@
 
 ⭕️ 修正が必要なこと
 
- 35ビット以下のインポート、表示おかしい？
- ５岸は1ビットのメートルが違う！！！
- 22ビットが何メートルか調べてそこからのビットを計算に入れてもらう。
-
- 案１
- 岸壁が5岸のやつは33を超えているビットから〇〇メートル引く？
+５岸のときは、おもて、ともの変更フラグをつけて備考に着岸位置を確認することを明記！
+ガントチャートの３５ビット未満の描画を正確にする。
 
 
- 
+　今まで色々な要件を追加したため、インポート時の処理が錯綜しているかもしれません。改めて要件を定義しますので、一から作成してください。インポート処理やDB関数を。
+インポート処理の要件
+・インポートするデータから、berth_number、arrival_time、departure_time、arrival_side、bow_position_m、stern_position_mの６つの値を連結して、data_hashの値にする。
+・schedule_dateとship_nameが存在しない場合、各項目をinsertする
+・schedule_dateとship_nameが存在しするばあい、以下の条件で任意の項目だけ更新する。
+・schedule_dateとship_nameが存在していて、data_hashの値が同じ場合、last_import_idのみ更新する。
+・schedule_dateとship_nameが存在していて、data_hashの値が異なる場合、新しいデータ（berth_number、arrival_time、departure_time、arrival_side、bow_position_m、stern_position_mのいずれかのみ）とlast_import_id更新する。さらに更新のあったフィールドの項目名でchanged_fieldsを更新する。
+・berth_numberが”5”の船はschedule_dateとship_nameで存在確認をして以下の条件で必ずupsertする。
+・berth_numberが”5”の船はparser.tsで指定したremarksの値とchanged_fields[ "bow_position_m","stern_position_m"固定値]の値を必ず更新する。
+
+data_hashをberth_number、arrival_time、departure_time、arrival_side、bow_position_m、stern_position_mの６つにする。
+
+
+
+ 変数名の変更:
+field_names というローカル変数の名前を field_names_for_diff に変更しました。これにより、schedulesテーブルのカラム名と偶然一致してしまうことを防ぎます。
+planner_companyの更新漏れ修正:
+data_hashが異なる場合のUPDATE文に、planner_companyの更新が漏れていました。これではプランナが変更されてもDBに反映されないため、planner_company = new_schedule->>'planner_company'を追加しました。
