@@ -20,8 +20,20 @@ type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
  */
 export async function getDailyReportByDate(date: string): Promise<DailyReport | null> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase.from("daily_reports").select("*").eq("report_date", date).single();
-  if (error) { console.error("Error fetching daily report:", error.message); return null; }
+  const { data, error } = await supabase
+    .from("daily_reports")
+    .select("*")
+    .eq("report_date", date)
+    .maybeSingle(); // .single() から .maybeSingle() に変更
+
+  // .maybeSingle() は、結果が0件でもエラーを返さないため、
+  // 他の予期せぬDBエラーのみをチェックすればよい
+  if (error) {
+    console.error("Error fetching daily report:", error.message);
+    return null;
+  }
+  
+  // dataは、結果が0件の場合は `null`、1件の場合はオブジェクトになる
   return data;
 }
 

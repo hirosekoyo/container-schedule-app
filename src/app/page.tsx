@@ -1,103 +1,126 @@
-import Image from "next/image";
+"use client"; // useRouter を使うためクライアントコンポーネントにします
 
-export default function Home() {
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ExternalLink, CalendarPlus, Upload } from 'lucide-react';
+
+/**
+ * Dateオブジェクトを 'YYYY-MM-DD' 形式の文字列に変換するヘルパー関数
+ */
+const formatDate = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+export default function HomePage() {
+  const router = useRouter();
+
+  const handleGoToTomorrow = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowDateString = formatDate(tomorrow);
+    router.push(`/dashboard/${tomorrowDateString}`);
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-2xl space-y-8">
+        <header className="text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            コンテナ船荷役予定管理システム
+          </h1>
+          <p className="mt-4 text-lg text-gray-600">
+            日々の船舶動静と荷役予定を効率的に管理します。
+          </p>
+        </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <main className="grid grid-cols-1 gap-6">
+          {/* 1. PORT OF HAKATA への外部リンク */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                PORT OF HAKATA
+              </CardTitle>
+              <CardDescription>
+                博多港の公式サイトで最新の船舶動静を確認します。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <a 
+                href="https://www.hktport.city.fukuoka.lg.jp/hpplsql/senpaku00" 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button className="w-full">公式サイトへ移動</Button>
+              </a>
+            </CardContent>
+          </Card>
+
+          {/* 2. 明日の動静表へ移動 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarPlus className="h-5 w-5" />
+                明日の動静表 (IC)
+              </CardTitle>
+              <CardDescription>
+                明日のスケジュールをガントチャートとテーブルで確認・編集します。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={handleGoToTomorrow}>
+                明日の動静表へ
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* 3. 船舶予定のインポートへ移動 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                船舶予定のインポート (IC)
+              </CardTitle>
+              <CardDescription>
+                複数日分のテキストデータを貼り付けて、予定を一括で登録・更新します。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link href="/dashboard/import">インポート画面へ</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* 4. 使い方のキャンばへのリンク */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                使い方
+              </CardTitle>
+              <CardDescription>
+                使い方ガイドを確認します。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <a 
+                href="https://www.hktport.city.fukuoka.lg.jp/hpplsql/senpaku00" 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button className="w-full">公式サイトへ移動</Button>
+              </a>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
     </div>
   );
 }
