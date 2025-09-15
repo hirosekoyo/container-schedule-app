@@ -4,6 +4,7 @@
 
 **「将来、別のAIや開発者に引き継ぐ際に、この要件定義書だけでプロジェクトを完全に再現できるか」**という観点で、要件定義書を更新してください。そして要件定義書全体を表示してください。
 
+３３から３５ビットの間隔は３０メートルではないので注意
  
 実装したい アイデア
 
@@ -39,10 +40,3 @@
 ・berth_numberが”5”の船はparser.tsで指定したremarksの値とchanged_fields[ "bow_position_m","stern_position_m"固定値]の値を必ず更新する。
 
 data_hashをberth_number、arrival_time、departure_time、arrival_side、bow_position_m、stern_position_mの６つにする。
-
-
-
- 変数名の変更:
-field_names というローカル変数の名前を field_names_for_diff に変更しました。これにより、schedulesテーブルのカラム名と偶然一致してしまうことを防ぎます。
-planner_companyの更新漏れ修正:
-data_hashが異なる場合のUPDATE文に、planner_companyの更新が漏れていました。これではプランナが変更されてもDBに反映されないため、planner_company = new_schedule->>'planner_company'を追加しました。

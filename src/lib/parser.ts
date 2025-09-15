@@ -134,7 +134,7 @@ const parseScheduleBlock = (
     let finalChangedFields: string[] | null = null;
 
     if (berth_number === 5) {
-      finalRemarks = "5岸の船は位置を正確に計算できないため手動で着岸位置を入力してください。\nIC-1との考慮が不要な場合、この予定行は削除してください。";
+      finalRemarks = "5岸の船は位置を正確に計算できないため手動で着岸位置を入力してください。\nIC-1と十分に距離が離れている場合、この予定行は削除してください。";
       finalChangedFields = ["bow_position_m", "stern_position_m"];
     }
 

@@ -13,7 +13,10 @@ import { Textarea } from './ui/textarea';
 import { DateTimePicker } from './DateTimePicker';
 import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants'; 
 import { Combobox } from './ui/Combobox';
-import { metersToBitNotation } from '@/lib/coordinateConverter';
+// --- 【ここからが修正箇所】 ---
+// 共通化されたコンバーターをインポート
+import { metersToBitNotation, bitNotationToMeters } from '@/lib/coordinateConverter';
+// --- 【ここまで】 ---
 
 interface EditScheduleDialogProps {
   schedule: ScheduleWithOperations | null;
@@ -23,16 +26,10 @@ interface EditScheduleDialogProps {
   latestImportId: string | null;
 }
 
-// ヘルパー関数に、前回のコードから省略されていた本体を正しく記述
-const bitNotationToMeters = (notation: string): number | null => {
-  const match = notation.match(/^(\d+)([+-])(\d+)$/);
-  if (!match) return null;
-  const mainBit = parseInt(match[1], 10), sign = match[2], remainder = parseInt(match[3], 10);
-  const BIT_LENGTH_M = 30;
-  let meters = mainBit * BIT_LENGTH_M;
-  if (sign === '+') meters += remainder; else if (sign === '-') meters -= remainder;
-  return meters;
-};
+// --- 【ここからが修正箇所】 ---
+// ローカルのヘルパー関数は不要になったので削除
+// const bitNotationToMeters = ...
+// --- 【ここまで】 ---
 
 const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string => {
   if (!dbTimestamp) return '';
@@ -55,40 +52,39 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
   useEffect(() => {
     if (open) {
-      if (schedule) { // --- 編集モード ---
+      if (schedule) {
         setScheduleData({
           ship_name: schedule.ship_name,
           arrival_side: schedule.arrival_side,
           planner_company: schedule.planner_company,
           berth_number: schedule.berth_number,
+          remarks: schedule.remarks,
           arrival_time_local: toDatetimeLocalString(schedule.arrival_time),
           departure_time_local: toDatetimeLocalString(schedule.departure_time),
           bow_position_notation: metersToBitNotation(Number(schedule.bow_position_m)),
           stern_position_notation: metersToBitNotation(Number(schedule.stern_position_m)),
-          remarks: schedule.remarks,
         });
         setOperationsData(schedule.cargo_operations.map(op => ({ ...op, start_time_local: toDatetimeLocalString(op.start_time) })));
-      } else { // --- 新規作成モード ---
+      } else {
         const initialTime = `${scheduleDateForNew}T08:00`;
         setScheduleData({
           ship_name: '',
           arrival_side: '左舷',
           planner_company: '',
-          berth_number: 6, // 新規作成時のデフォルト岸壁
+          berth_number: 6,
+          remarks: '',
           arrival_time_local: initialTime,
           departure_time_local: initialTime,
           bow_position_notation: '',
           stern_position_notation: '',
-          remarks: '',
         });
         setOperationsData([]);
       }
     }
   }, [schedule, open, scheduleDateForNew]);
   
-  const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScheduleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // berth_number は数値として state に保存
     const isNumberField = name === 'berth_number';
     setScheduleData(prev => prev ? { ...prev, [name]: isNumberField ? parseInt(value, 10) : value } : null);
   };
@@ -121,10 +117,14 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!scheduleData) return;
-    const bow_m = bitNotationToMeters(scheduleData.bow_position_notation);
-    const stern_m = bitNotationToMeters(scheduleData.stern_position_notation);
-    if (bow_m === null || stern_m === null) { alert('位置の形式が不正です'); return; }
+
+    const bow_m_float = bitNotationToMeters(scheduleData.bow_position_notation);
+    const stern_m_float = bitNotationToMeters(scheduleData.stern_position_notation);
+    if (bow_m_float === null || stern_m_float === null) { alert('位置の形式が不正です'); return; }
     if (!scheduleData.arrival_time_local || !scheduleData.departure_time_local) { alert('時間は必須です'); return; }
+
+    const bow_m = Math.floor(bow_m_float);
+    const stern_m = Math.floor(stern_m_float);
 
     const formatForDB = (localString: string) => {
       if (!localString) return '';
@@ -132,14 +132,12 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     };
 
     const dataForHash = {
-      ship_name: scheduleData.ship_name,
       berth_number: scheduleData.berth_number,
       arrival_time: formatForDB(scheduleData.arrival_time_local),
       departure_time: formatForDB(scheduleData.departure_time_local),
       arrival_side: scheduleData.arrival_side,
-      bow_position_m: bow_m,
-      stern_position_m: stern_m,
-      planner_company: scheduleData.planner_company,
+      bow_position_m: bow_m, // 切り捨てた値を使用
+      stern_position_m: stern_m, // 切り捨てた値を使用
     };
 
     const newDataHash = [
@@ -151,10 +149,11 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       dataForHash.stern_position_m,
     ].join('|');
     
-    // 2. DBに保存する最終的なデータオブジェクトを作成
     const dataToSave = {
+      ship_name: scheduleData.ship_name,
+      planner_company: scheduleData.planner_company,
+      remarks: scheduleData.remarks,
       ...dataForHash,
-      remarks: scheduleData.remarks, // remarks はハッシュ計算後に結合
       data_hash: newDataHash,
       last_import_id: latestImportId,
     };
@@ -167,7 +166,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     }));
     // --- 【ここまで】 ---
 
-    if (schedule) { // --- 編集モード ---
+    if (schedule) {
       startTransition(async () => {
         // @ts-ignore
         const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
