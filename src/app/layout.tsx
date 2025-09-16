@@ -26,7 +26,7 @@ export default function RootLayout({
     <html lang="ja">
       {/* --- 【ここからが修正箇所】 --- */}
       {/* スクロール時のバウンスを抑制する */}
-      <body className={`${inter.className} overscroll-none`}>
+      <body className={`${inter.className} overscroll-behavior-none`}>
         {children}
       </body>
       {/* --- 【ここまで】 --- */}

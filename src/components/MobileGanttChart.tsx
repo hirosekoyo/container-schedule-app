@@ -2,7 +2,7 @@
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useRef, useEffect } from 'react';
-import { bitNotationToMeters, metersToBitNotation } from '@/lib/coordinateConverter';
+import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 
@@ -10,7 +10,6 @@ interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
 }
-
 
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
   const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
@@ -65,12 +64,17 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
   };
 
   const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
-  const bitLabels = Array.from({ length: 32 }, (_, i) => 33 + i);
+  const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i); // 33から65まで
   const HOUR_HEIGHT_PX = 40;
-  const totalChartHeight = (timeLabels.length - 1) * 2 * HOUR_HEIGHT_PX;
   
   // --- 【ここからが修正箇所】 ---
+  // 1ビットあたりの幅を固定値に戻す
+  const BIT_WIDTH_PX = 56; 
+  // 全体の幅を固定ピクセルで計算
+  const totalChartWidth = bitLabels.length * BIT_WIDTH_PX;
+  const totalChartHeight = (timeLabels.length - 1) * 2 * HOUR_HEIGHT_PX;
   const CHART_START_BIT = 33;
+
   const CHART_END_BIT = 65; // 64の終わりまで描画するため
 
   // 1. 描画範囲全体のメートル長さを計算
@@ -83,8 +87,7 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
     if (totalMetersInRange === 0) return 0;
     return ((meter - chartStart_m) / totalMetersInRange) * 100;
   };
-  // --- 【ここまで】 ---
-
+  // --- 【ここまで修正】 ---
 
   const topAxisRef = useRef<HTMLDivElement>(null);
   const leftAxisRef = useRef<HTMLDivElement>(null);
@@ -105,30 +108,24 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
     <div className="grid h-full w-full" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '1.75rem 1fr' }}>
       <div className="bg-white z-20 border-b border-r border-gray-200"></div>
       <div ref={topAxisRef} className="overflow-hidden bg-white z-10 border-b border-gray-200">
-        {/* 横軸ラベル: leftをパーセンテージで指定 */}
-        <div className="relative h-full">
-          {bitLabels.map((label) => (
-            <div key={`bl-${label}`} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm text-gray-700" 
-                 style={{ left: `${meterToPercent(bitNotationToMeters(`${label}`)!)}%` }}>
-              {label}
-            </div>
+        <div className="relative" style={{ width: totalChartWidth, height: '100%' }}>
+          {bitLabels.map((label, i) => (
+            <div key={`bl-${i}`} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm text-gray-700" style={{ left: i * BIT_WIDTH_PX }}>{label}</div>
           ))}
         </div>
       </div>
       <div ref={leftAxisRef} className="overflow-hidden bg-white z-10 border-r border-gray-200">
-        <div className="relative" style={{ height: totalChartHeight }}>
+        <div className="relative" style={{ width: '100%', height: totalChartHeight }}>
           {timeLabels.map((label, i) => (
             <div key={`tl-${i}`} className="absolute -translate-y-1/2 text-xs text-gray-500" style={{ top: i * 2 * HOUR_HEIGHT_PX, right: 4 }}>{label}</div>
           ))}
         </div>
       </div>
       <div ref={contentAreaRef} className="overflow-auto overscroll-behavior-none">
-        {/* コンテンツエリアの幅はCSSで100%に任せる */}
-        <div className="relative" style={{ height: totalChartHeight }}>
-          {/* 背景グリッド: leftをパーセンテージで指定 */}
+        <div className="relative" style={{ width: totalChartWidth, height: totalChartHeight }}>
           <div className="absolute inset-0">
             {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
-            {bitLabels.map((bit) => <div key={`v-${bit}`} className="absolute h-full border-l border-gray-100" style={{ left: `${meterToPercent(bitNotationToMeters(`${bit}`)!)}%` }} />)}
+            {bitLabels.map((_, i) => <div key={`v-${i}`} className="absolute h-full border-l border-gray-100" style={{ left: i * BIT_WIDTH_PX }} />)}
           </div>
           
           {schedules.map((schedule) => {
@@ -139,30 +136,30 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
             
             const bow_m = Number(schedule.bow_position_m);
             const stern_m = Number(schedule.stern_position_m);
-            
-            const chartStart_m = bitNotationToMeters(`${33}`)!;
-            const chartEnd_m = bitNotationToMeters(`${65}`)!;
 
-            if (Math.max(bow_m, stern_m) < chartStart_m) {
-              return null;
-            }
+            const chartStart_m = bitNotationToMeters(`${CHART_START_BIT}`)!;
+            const chartEnd_m = bitNotationToMeters(`${65}`)!;
+            
+            if (Math.max(bow_m, stern_m) < chartStart_m) return null;
             
             const left_m = Math.max(Math.min(bow_m, stern_m), chartStart_m);
             const right_m = Math.min(Math.max(bow_m, stern_m), chartEnd_m);
-            
             const width_m = right_m - left_m;
-   
+            if (width_m <= 0) return null;
             
-            // left, width をパーセンテージで計算
-            const leftPercent = meterToPercent(left_m);
-            const widthPercent = (width_m / totalMetersInRange) * 100;
+            // --- 【ここからが修正箇所】 ---
+            const left_bit = metersToBitPosition(left_m);
+            const right_bit = metersToBitPosition(right_m);
+            
+            const left = (left_bit - CHART_START_BIT) * BIT_WIDTH_PX;
+            const width = (right_bit - left_bit) * BIT_WIDTH_PX;
+            // --- 【ここまで修正】 ---
 
             return (
               <Popover key={schedule.id} open={openPopoverIds.includes(schedule.id)} onOpenChange={() => togglePopover(schedule.id)}>
                 <PopoverTrigger asChild>
-                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" 
-                       style={{ top, height, left: `${leftPercent}%`, width: `${widthPercent}%` }}>
-                      <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
+                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: '28px' }}>
+                    <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
                       <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
                       <span>{schedule.ship_name}</span>
                       <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
