@@ -1,8 +1,8 @@
 "use client";
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
-import React, { useState } from 'react'; // useStateをインポート
-import { bitNotationToMeters, metersToBitNotation } from '@/lib/coordinateConverter';
+import React, { useState, useRef, useEffect } from 'react';
+import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 
@@ -10,14 +10,7 @@ interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
 }
-// モバイル用に定数を調整
-const CHART_START_HOUR = 0;
-const CHART_END_HOUR = 26;
-const TOTAL_CHART_HOURS = CHART_END_HOUR - CHART_START_HOUR;
-const CHART_START_BIT = 33;
-const CHART_END_BIT = 64;
-const BIT_WIDTH_PX = 48; // PC版より少し狭くする
-const HOUR_HEIGHT_PX = 40; // PC版より少し低くする
+
 
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
   const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
@@ -32,101 +25,132 @@ const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string
   if (isDepartureNextDay) {
     endHour = 24 + (departure.getHours() + departure.getMinutes() / 60);
   } else if (departure > nextDay) {
-    endHour = CHART_END_HOUR;
+    endHour = 26;
   } else {
     endHour = departure.getHours() + departure.getMinutes() / 60;
   }
-  return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
+  return { startHour, endHour: Math.min(endHour, 26) };
 };
 // --- 吹き出しの中身を描画する新しいコンポーネント ---
 const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations }> = ({ schedule }) => (
-  <div className="p-2 space-y-2">
-    <h3 className="font-bold text-md border-b pb-1">{schedule.ship_name}</h3>
+  <div className="p-2 space-y-2 text-xs">
+    <h3 className="font-bold text-sm border-b pb-1">{schedule.ship_name}</h3>
     <Table>
       <TableBody>
-        <TableRow><TableCell className="font-medium text-muted-foreground w-1/3">着岸</TableCell><TableCell>{new Date(schedule.arrival_time.replace(' ','T')).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell></TableRow>
-        <TableRow><TableCell className="font-medium text-muted-foreground">離岸</TableCell><TableCell>{new Date(schedule.departure_time.replace(' ','T')).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell></TableRow>
-        <TableRow><TableCell className="font-medium text-muted-foreground">おもて</TableCell><TableCell>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell></TableRow>
-        <TableRow><TableCell className="font-medium text-muted-foreground">とも</TableCell><TableCell>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell></TableRow>
-        <TableRow><TableCell className="font-medium text-muted-foreground">備考</TableCell><TableCell className="whitespace-pre-wrap">{schedule.remarks || '-'}</TableCell></TableRow>
+        <TableRow><TableCell className="font-medium text-muted-foreground w-1/3 p-1 h-auto">着岸</TableCell><TableCell className="p-1 h-auto">{new Date(schedule.arrival_time.replace(' ','T')).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell></TableRow>
+        <TableRow><TableCell className="font-medium text-muted-foreground p-1 h-auto">離岸</TableCell><TableCell className="p-1 h-auto">{new Date(schedule.departure_time.replace(' ','T')).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell></TableRow>
+        {/* metersToBitNotation を使って正しくフォーマットする */}
+        <TableRow><TableCell className="font-medium text-muted-foreground p-1 h-auto">おもて</TableCell><TableCell className="p-1 h-auto">{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell></TableRow>
+        <TableRow><TableCell className="font-medium text-muted-foreground p-1 h-auto">とも</TableCell><TableCell className="p-1 h-auto">{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell></TableRow>
+        <TableRow><TableCell className="font-medium text-muted-foreground p-1 h-auto">備考</TableCell><TableCell className="whitespace-pre-wrap p-1 h-auto">{schedule.remarks || '-'}</TableCell></TableRow>
       </TableBody>
     </Table>
+    {schedule.cargo_operations.length > 0 && (
+      <div className="mt-2">
+        <h4 className="font-semibold border-b">荷役作業</h4>
+        {schedule.cargo_operations.map(op => (
+          <div key={op.id} className="text-xs mt-1">
+            <p><strong>開始:</strong> {op.start_time ? new Date(op.start_time.replace(' ','T')).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'} | <strong>GC:</strong> {op.crane_names || '-'} | <strong>本数:</strong> {op.container_count || '-'}</p>
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 );
 
 export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps) {
-  // どの船のPopoverが開いているかを管理するstate
-  const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
+  const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
+  const togglePopover = (scheduleId: number) => {
+    setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [...prev, scheduleId]);
+  };
 
-  const timeLabels = Array.from({ length: 14 }, (_, i) => (i * 2) % 24);
-  const bitLabels = Array.from({ length: 32 }, (_, i) => 33 + i);
+  const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
+  const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i); // 32 -> 33 (33から65まで)
   const HOUR_HEIGHT_PX = 40;
   const BIT_WIDTH_PX = 56;
   const totalChartWidth = (bitLabels.length) * BIT_WIDTH_PX;
   const totalChartHeight = (timeLabels.length - 1) * 2 * HOUR_HEIGHT_PX;
 
+  const topAxisRef = useRef<HTMLDivElement>(null);
+  const leftAxisRef = useRef<HTMLDivElement>(null);
+  const contentAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea) return;
+    const handleScroll = () => {
+      if (topAxisRef.current) topAxisRef.current.scrollLeft = contentArea.scrollLeft;
+      if (leftAxisRef.current) leftAxisRef.current.scrollTop = contentArea.scrollTop;
+    };
+    contentArea.addEventListener('scroll', handleScroll);
+    return () => contentArea.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <div className="relative w-full h-full overflow-auto">
-      {/* --- コンテンツエリア (スクロールする部分) --- */}
-      <div className="relative" style={{ width: totalChartWidth, height: totalChartHeight }}>
-
-        {/* --- 背景グリッド (スクロールに追従) --- */}
-        <div className="absolute inset-0">
-          {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
-          {bitLabels.map((_, i) => <div key={`v-${i}`} className="absolute h-full border-l border-gray-100" style={{ left: i * BIT_WIDTH_PX }} />)}
+    <div className="grid h-full w-full" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '1.75rem 1fr' }}>
+      <div className="bg-white z-20 border-b border-r border-gray-200"></div>
+      <div ref={topAxisRef} className="overflow-hidden bg-white z-10 border-b border-gray-200">
+        <div className="relative" style={{ width: totalChartWidth, height: '100%' }}>
+          {bitLabels.map((label, i) => (
+            <div key={`bl-${i}`} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm text-gray-700" style={{ left: i * BIT_WIDTH_PX }}>{label}</div>
+          ))}
         </div>
-        
-        {/* --- 船舶ブロックとPopover --- */}
-        {schedules.map((schedule) => {
-          const { startHour, endHour } = calculateBarRange(schedule, baseDate);
-          if (endHour <= startHour) return null;
+      </div>
+      <div ref={leftAxisRef} className="overflow-hidden bg-white z-10 border-r border-gray-200">
+        <div className="relative" style={{ width: '100%', height: totalChartHeight }}>
+          {timeLabels.map((label, i) => (
+            <div key={`tl-${i}`} className="absolute -translate-y-1/2 text-xs text-gray-500" style={{ top: i * 2 * HOUR_HEIGHT_PX, right: 4 }}>{label}</div>
+          ))}
+        </div>
+      </div>
+      <div ref={contentAreaRef} className="overflow-auto">
+        <div className="relative" style={{ width: totalChartWidth, height: totalChartHeight }}>
+          <div className="absolute inset-0">
+            {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
+            {bitLabels.map((_, i) => <div key={`v-${i}`} className="absolute h-full border-l border-gray-100" style={{ left: i * BIT_WIDTH_PX }} />)}
+          </div>
           
-          const top = startHour * HOUR_HEIGHT_PX;
-          const height = (endHour - startHour) * HOUR_HEIGHT_PX;
+          {schedules.map((schedule) => {
+            const { startHour, endHour } = calculateBarRange(schedule, baseDate);
+            if (endHour <= startHour) return null;
+            const top = startHour * HOUR_HEIGHT_PX;
+            const height = (endHour - startHour) * HOUR_HEIGHT_PX;
+            
+            // --- 【ここからが修正箇所】 ---
+            const bow_m = Number(schedule.bow_position_m);
+            const stern_m = Number(schedule.stern_position_m);
+            const chartStart_m = bitNotationToMeters(`${33}`)!;
 
-          const chartStart_m = bitNotationToMeters(`${33}`)!;
-          const totalMetersInRange = bitNotationToMeters(`${65}`)! - chartStart_m;
-          let left_m = Math.min(Number(schedule.bow_position_m), Number(schedule.stern_position_m));
-          if (left_m < chartStart_m) left_m = chartStart_m;
-          const width_m = Math.max(Number(schedule.bow_position_m), Number(schedule.stern_position_m)) - left_m;
-          
-          const left = ((left_m - chartStart_m) / totalMetersInRange) * totalChartWidth;
-          const width = (width_m / totalMetersInRange) * totalChartWidth;
+            let left_m = Math.min(bow_m, stern_m);
+            if (left_m < chartStart_m) left_m = chartStart_m;
+            const width_m = Math.max(bow_m, stern_m) - left_m;
 
-          return (
-            <Popover key={schedule.id} open={openPopoverId === schedule.id} onOpenChange={(isOpen) => setOpenPopoverId(isOpen ? schedule.id : null)}>
-              <PopoverTrigger asChild>
-                <div
-                  className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer"
-                  style={{ top, height, left, width, minWidth: BIT_WIDTH_PX }}
-                >
-                  <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
-                    <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
-                    <span>{schedule.ship_name}</span>
-                    <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
+            const left_bit = metersToBitPosition(left_m);
+            const right_bit = metersToBitPosition(left_m + width_m);
+            
+            // ビット座標を元に、ピクセル位置を計算
+            const left = (left_bit - 33) * BIT_WIDTH_PX;
+            const width = (right_bit - left_bit) * BIT_WIDTH_PX;
+            // --- 【ここまで修正】 ---
+
+            return (
+              <Popover key={schedule.id} open={openPopoverIds.includes(schedule.id)} onOpenChange={() => togglePopover(schedule.id)}>
+                <PopoverTrigger asChild>
+                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: BIT_WIDTH_PX / 2 }}>
+                    <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
+                      <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
+                      <span>{schedule.ship_name}</span>
+                      <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
+                    </div>
                   </div>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" side="top" align="center">
-                <ScheduleDetailPopoverContent schedule={schedule} />
-              </PopoverContent>
-            </Popover>
-          );
-        })}
-      </div>
-      
-      {/* --- 固定表示エリア (スクロールしない部分) --- */}
-      {/* 横軸ラベル (上部に固定) */}
-      <div className="sticky top-0 left-0 bg-white/80 backdrop-blur-sm z-10" style={{ width: totalChartWidth, marginLeft: '2rem', height: '1.75rem' }}>
-        {bitLabels.map((label, i) => (
-          <div key={`bl-${i}`} className="absolute top-0 -translate-x-1/2 text-sm text-gray-700" style={{ left: i * BIT_WIDTH_PX }}>{label}</div>
-        ))}
-      </div>
-      {/* 縦軸ラベル (左側に固定) */}
-      <div className="sticky top-0 left-0 bg-white/80 backdrop-blur-sm z-10" style={{ height: totalChartHeight, marginTop: '1.75rem', width: '2rem' }}>
-        {timeLabels.map((label, i) => (
-          <div key={`tl-${i}`} className="absolute text-xs text-gray-500" style={{ top: i * 2 * HOUR_HEIGHT_PX - 8, right: 4 }}>{label}</div>
-        ))}
+                </PopoverTrigger>
+                <PopoverContent className="w-80" side="top" align="center">
+                  <ScheduleDetailPopoverContent schedule={schedule} />
+                </PopoverContent>
+              </Popover>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
