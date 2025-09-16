@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { DateNavigator } from '@/components/DateNavigator';
 import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import { MobileGanttChart } from './MobileGanttChart';
-import { ScheduleDetailModal } from './ScheduleDetailModal';
+// ScheduleDetailModal は不要になったので削除
 
 interface MobileViewClientProps {
   initialReport: DailyReport | null;
@@ -12,20 +12,10 @@ interface MobileViewClientProps {
   date: string;
 }
 
-export function MobileViewClient({
-  initialReport,
-  initialSchedules,
-  date,
-}: MobileViewClientProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
-
-  const handleScheduleClick = (schedule: ScheduleWithOperations) => {
-    setSelectedSchedule(schedule);
-    setIsModalOpen(true);
-  };
-
-  const displayDate = new Date(date).toLocaleDateString('ja-JP', {
+export function MobileViewClient({ initialReport, initialSchedules, date }: MobileViewClientProps) {
+  // モーダル関連のstateとハンドラはすべて不要になるので削除
+  
+    const displayDate = new Date(date).toLocaleDateString('ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
 
@@ -42,18 +32,13 @@ export function MobileViewClient({
       </header>
 
       <main className="flex-1 overflow-hidden">
+        {/* onScheduleClickは不要になったので削除 */}
         <MobileGanttChart 
           schedules={initialSchedules}
           baseDate={date}
-          onScheduleClick={handleScheduleClick}
         />
       </main>
-      
-      <ScheduleDetailModal
-        schedule={selectedSchedule}
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-      />
+      {/* ScheduleDetailModal の呼び出しを削除 */}
     </>
   );
 }
