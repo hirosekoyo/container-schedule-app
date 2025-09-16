@@ -2,16 +2,14 @@
  col-spanで表示の割合を調整できる。
 基本的にはプラス１５メートル、マイナス１４メートルのルールなのに、たまにポートオブ博多でマイナす１５の時があり、それには対応していない。
 
-「将来、別のAIや開発者に引き継ぐ際に、この要件定義書だけでプロジェクトを完全に再現できるか」という観点で、要件定義書を更新してください。
-プロジェクトディレクトリ構成と各ファイルの概要説明も最新化してください。
-以下の現在のバージョンをもとに作成して、要件定義書全体を表示してください。
-
 ３３から３５ビットの間隔は３０メートルではないので注意
 
 使い方ガイドにスマホのPWAのURL
 印刷時に倍率を100％にする。入りきらない場合だけ倍率を下げる。
  
 実装したい アイデア
+
+モバイル画面はピンチイン、ピンチアウトで縮小できるようにする？
 
  ○ Compiling /mobile/[date] ...
 <w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
@@ -42,3 +40,8 @@ hakata@futo.com
 https://maskable.app/editor
 https://www.pwabuilder.com/imageGenerator
 アイコン作成サイト
+
+
+「将来、別のAIや開発者に引き継ぐ際に、この要件定義書だけでプロジェクトを完全に再現できるか」という観点で、要件定義書を更新してください。
+プロジェクトディレクトリ構成と各ファイルの概要説明も最新化してください。
+以下の現在のバージョンをもとに作成して、要件定義書全体を表示してください。

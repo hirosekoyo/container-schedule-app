@@ -159,14 +159,14 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
               <Popover key={schedule.id} open={openPopoverIds.includes(schedule.id)} onOpenChange={() => togglePopover(schedule.id)}>
                 <PopoverTrigger asChild>
                   <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: '28px' }}>
-                    <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
+                    <div className="flex items-center gap-1 text-[15px] font-bold break-words text-center">
                       <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
                       <span>{schedule.ship_name}</span>
                       <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
                     </div>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-80" side="top" align="center">
+                <PopoverContent className="w-80" side="right" align="center">
                   <ScheduleDetailPopoverContent schedule={schedule} />
                 </PopoverContent>
               </Popover>
