@@ -6,39 +6,49 @@
 2. 機能要件
 日付ごとの予定を表示・編集するメイン画面。初回表示の高速化のため、ページ本体はサーバーコンポーネントとしてデータ取得を行い、インタラクティブなUI部分はクライアントコンポーネント(DashboardClient)に分離したハイブリッドレンダリング方式を採用。
 ページナビゲーション (DateNavigator):
-表示日付の前日・翌日に移動するための矢印ボタン。
-現在の日付をクリックするとカレンダーが表示され、任意の日付にジャンプ可能。
-ページ遷移時にimportIdをURLクエリパラメータで維持する。
+表示日付の前日・翌日に移動するための矢印ボタンを配置。
+現在の日付をクリックするとカレンダー(Popover + Calendar)が表示され、任意の日付にジャンプできる。
+ページ遷移時、URLクエリパラメータに含まれるimportIdを維持する。
+データインポートページへのリンクボタンと、印刷プレビューを開くボタンを配置。
 ヘッダー情報エリア (DashboardHeader):
-選択日付の「日付」「当直者」「サポート者」を表示。
-ヘッダーカード全体をクリックすると、当直者、風速、メモ情報を編集するためのモーダル (EditDailyReportDialog) が開く。
-風速入力には、リアルタイム反映される一括入力機能あり。
+選択された日付の「日付」「当直者」「サポート者」を表示。
+カード全体をクリックすると、当直者、風速、メモ情報を編集するためのモーダル(EditDailyReportDialog)が表示される。風速入力には、リアルタイムで反映される一括入力機能も備える。
 船舶図（ガントチャート）エリア (GanttChart):
 縦軸: 時間（0:00 〜 翌2:00）。
-横軸: ビット番号（33〜64）。画面幅に応じて動的に拡縮（レスポンシブ対応）。
-ビット番号の上に、クレーン止め位置を表示。
-各船舶予定を矩形ブロックで表示。船体が33ビット未満にかかる場合は左端を33ビットに揃える。
-各ブロッククリックで予定編集モーダル (EditScheduleDialog) が開く。
-差分ハイライト: インポート直後、last_import_idが最新でない場合は赤色、changed_fieldsにデータがある場合は黄色でハイライト表示。
+横軸: ビット番号（33〜64）。画面幅に応じて動的に拡縮する（レスポンシブ対応）。
+ビット番号の上部に、クレーンの止め位置を示す静的なボックスを表示。これも横軸に連動して拡縮する。
+各船舶予定を矩形ブロックとして表示。船体が33ビット未満にかかる予定は、左端を33ビットに揃えて描画する。
+各ブロッククリックで予定編集モーダル(EditScheduleDialog)が開く。
+差分ハイライト: インポート直後は、以下のルールで色分け表示される。
+赤色: last_import_idがページの最新IDと異なる（今回のインポートに含まれなかった）「削除候補」の予定。
+黄色: last_import_idが最新で、かつchanged_fieldsにデータがある「内容が変更された」予定。
 荷役予定詳細テーブルエリア (ScheduleTable):
-表示順: 第1キー: 岸壁 (昇順)、第2キー: 着岸時間 (昇順)。
-時刻表示: schedule_dateと日付が異なる場合は、日付と時刻を2段表示。
+表示順は、**第1キー: 岸壁 (昇順)、第2キー: 着岸時間 (昇順)**でDBから取得・表示。
+時刻表示: schedule_dateと着岸・離岸・荷役開始の日付が異なる場合、日付と時刻を2段で表示。
 各行クリックで予定編集モーダルが開く。ゴミ箱アイコンクリックで予定を削除。
-最終行に「新規作成行」を常設。クリックで空の予定編集モーダルが開く。
+最終行に「新規作成行」を常設し、クリックで空の予定編集モーダルが開く。
+差分ハイライト: ガントチャートと同様のルールに加え、changed_fieldsに含まれるフィールドのセル単位でのハイライトも行う。
+予定編集モーダル (EditScheduleDialog):
+モード: 既存の予定をクリックした場合は「編集モード」、新規作成行をクリックした場合は「新規作成モード」で開く。
+編集対象: schedules（船舶情報）とcargo_operations（荷役作業）の両方を編集可能。
+UI/UX:
+日時入力は、カレンダーと15分刻みのセレクトボックスを組み合わせたカスタムコンポーネント(DateTimePicker)を採用。
+着岸位置（おもて・とも）はビット表記(33+15)で入力可能。
+荷役作業行は動的に追加・削除可能。「GC運転」の初期値は、船舶情報の「プランナ」から自動入力される。
+データ処理: 更新ボタン押下時、備考(remarks)を除く主要フィールドからdata_hashを再計算し、last_import_idを最新化、changed_fieldsをNULLにリセットしてDBに保存する。
 メモ編集エリア (MemoEdit):
-daily_reportsテーブルのmemoフィールドを表示・編集できる独立コンポーネント。
-目的: 複数日分の船舶予定テキストを一括で解析し、DBに登録。
+daily_reportsテーブルのmemoフィールドを表示・編集できる独立したコンポーネント。
+目的: 複数日分の船舶予定テキストを一括で解析し、DBに登録する。
 処理フロー:
-テキスト入力: 専用ページでテキストエリアにデータを貼り付け。
-データ分割: テキストを「連絡先」行を区切りとして分割。
-データ抽出・加工: 船名（行頭数字・◆除去）、日時、着岸位置などを抽出。船の中心点からberth_numberを自動判定（45.5m未満:6, 57.5m未満:7, それ以上:8）。remarksを除く主要フィールドでdata_hashを計算。ユニークID(last_import_id)を生成。日またぎはレコード複製。
+データ分割: テキストを「連絡先」行を区切りとして個別の船舶データブロックに分割。
+データ抽出・加工: 船名（行頭の数字や◆は除去）、着岸・離岸日時、着岸位置などを抽出。船の中心点からberth_numberを自動判定（45.5m未満:6, 57.5m未満:7, それ以上:8）。remarksを除く主要フィールドでdata_hashを計算。ユニークID(last_import_id)を生成。日またぎはレコード複製。
 DB登録 (高度なUPSERT): DB関数 upsert_schedules_with_check を呼び出し。
 新規: INSERT。changed_fieldsはNULL。
 既存 & data_hash異なる: UPDATEし、changed_fieldsに変更があったフィールド名をJSONBで保存。
 既存 & data_hash同じ: last_import_idのみUPDATEし、changed_fieldsをNULLにリセット。
-リダイレクト: 完了後、インポート翌日のダッシュボードにimportIdを付けてリダイレクト。
-ダッシュボードの「印刷」ボタンから開かれる、A4縦向きに最適化されたページ。
-レイアウト: 通常画面のDashboardClientを、transform: scale()でA4用紙に収まるように縮小して表示。操作UI（日付ナビ、インポートボタン）は非表示。
+リダイレクト: 完了後、インポート作業日の翌日のダッシュボードにimportIdを付けてリダイレクトする。
+ダッシュボードの「印刷」ボタンから新しいタブで開かれる、A4縦向きに最適化されたページ。
+レイアウト: 通常画面の DashboardClient コンポーネントを、CSS transform: scale() を使ってA4用紙一枚に収まるように縮小して表示する。操作UI（日付ナビ、インポートボタン）は非表示にする。
 3. 非機能要件
 権限管理: 開発中は認証なし。
 レスポンシブデザイン: PC（通常画面）とA4用紙（印刷画面）に最適化。
@@ -110,8 +120,7 @@ DECLARE
   field_names TEXT[] := ARRAY['ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
   changed_fields_array TEXT[]; i INT;
 BEGIN
-  FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data)
-  LOOP
+  FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data) LOOP
     SELECT * INTO existing_schedule FROM public.schedules WHERE schedule_date = (new_schedule->>'schedule_date')::DATE AND ship_name = (new_schedule->>'ship_name');
     
     IF existing_schedule IS NULL THEN
@@ -202,67 +211,105 @@ BEGIN
   TRUNCATE TABLE public.schedules RESTART IDENTITY CASCADE;
 END;
 $$;
-
-8. プロジェクトディレクトリ構成 (最終FIX版)
+7. 環境変数設定
+プロジェクトのルートディレクトリに.env.localファイルを作成し、以下の内容を記述する。値はSupabaseプロジェクトのダッシュボード（Settings > API）から取得する。
 code
 Code
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+8. プロジェクトディレクトリ構成と各ファイルの概要 (最終FIX版)
+8.1. ディレクトリ構成図
+code
 .
-├── /app/
-│   ├── /dashboard/
+├── /app/                                  # Next.jsのApp Router。フォルダ構造がURLになる
+│   ├── /dashboard/                      # PC版ダッシュボード関連 (/dashboard/...)
 │   │   ├── /[date]/
-│   │   │   └── page.tsx         # 【サーバー】ダッシュボード本体。データ取得とUIコンテナの役割。
+│   │   │   └── page.tsx                 # 【サーバー】ダッシュボード本体。データ取得とUIコンテナの役割
 │   │   └── /import/
-│   │       └── page.tsx         # 【クライアント】データ一括インポートページ。
-│   └── /print/
+│   │       └── page.tsx                 # 【クライアント】データ一括インポートページ
+│   ├── /home/
+│   │   └── page.tsx                     # 【クライアント】PCユーザー向けのトップページ（メニュー画面）
+│   ├── /login/
+│   │   └── page.tsx                     # 【クライアント】ログインフォームページ
+│   ├── /mobile/                         # モバイル専用画面関連 (/mobile/...)
+│   │   └── /[date]/
+│   │       └── page.tsx                 # 【サーバー】スマートフォン用閲覧画面。データ取得を行う
+│   └── /print/                          # 印刷プレビュー関連 (/print/...)
 │       ├── /[date]/
-│       │   ├── PrintPageClient.tsx # 【クライアント】印刷プレビュー画面のレイアウトと印刷実行。
-│       │   └── page.tsx         # 【サーバー】印刷用データの取得とクライアントへの引き渡し。
-│       ├── layout.tsx           # 印刷ページ専用の最小限のHTMLレイアウト。
-│       └── print.css            # 印刷専用のスタイルシート。
-│   ├── globals.css              # アプリケーション全体のグローバルCSS。
-│   └── layout.tsx               # アプリケーション全体のルートレイアウト。
+│       │   ├── PrintPageClient.tsx      # 【クライアント】印刷レイアウトの構築と印刷実行
+│       │   └── page.tsx                 # 【サーバー】印刷用データの取得
+│       ├── layout.tsx                   # 印刷ページ専用の最小限HTMLレイアウト
+│       └── print.css                    # 印刷専用スタイルシート
+│   ├── globals.css                      # アプリ全体のグローバルCSS
+│   ├── layout.tsx                       # アプリ全体のルートレイアウト（フォント、メタデータ定義）
+│   └── page.tsx                         # 【クライアント】ルート(`/`)。デバイスを判別しリダイレクト
+├── /public/                               # 静的ファイル置き場
+│   ├── /icons/
+│   │   ├── icon-192x192.png             # PWA用アプリアイコン (中サイズ)
+│   │   └── icon-512x512.png             # PWA用アプリアイコン (大サイズ)
+│   └── manifest.json                    # PWAの設定ファイル
 ├── /src/
-│   ├── /components/
-│   │   ├── /ui/                   # Shadcn/uiによって自動生成されるUIプリミティブコンポーネント。
-│   │   │   └── Combobox.tsx     # 自由入力可能なカスタムコンボボックス。
-│   │   ├── DashboardClient.tsx    # 【クライアント】ダッシュボードの主要UIをまとめるコンテナ。state管理も担当。
-│   │   ├── DashboardHeader.tsx    # 【クライアント】日付、当直者、風速情報を表示するヘッダー。
-│   │   ├── DateNavigator.tsx      # 【クライアント】日付遷移ボタンとカレンダーピッカー。
-│   │   ├── DateTimePicker.tsx     # 【クライアント】日付と15分刻みの時刻を選択するカスタムUI。
-│   │   ├── EditDailyReportDialog.tsx # 【クライアント】日時情報（当直者、風速、メモ）を編集するモーダル。
-│   │   ├── EditScheduleDialog.tsx   # 【クライアント】船舶・荷役予定を編集・新規作成する高機能モーダル。
-│   │   ├── GanttChart.tsx         # 【クライアント】船舶図（ガントチャート）を描画するレスポンシブコンポーネント。
-│   │   ├── MemoEdit.tsx           # 【クライアント】日次メモを表示・編集する専用コンポーネント。
-│   │   └── ScheduleTable.tsx      # 【クライアント】荷役予定詳細を表示するテーブル。
+│   ├── /components/                     # 再利用可能なUIコンポーネント
+│   │   ├── /ui/
+│   │   │   └── Combobox.tsx             # 自由入力可能なカスタムコンボボックス
+│   │   ├── AnchorInfoModal.tsx          # 【クライアント】モバイル用。アンカー/極限位置情報モーダル
+│   │   ├── DashboardClient.tsx          # 【クライアント】PC版ダッシュボードのUIと状態管理の親コンポーネント
+│   │   ├── DashboardHeader.tsx          # 【クライアント】日付、当直者、風速情報を表示するヘッダー
+│   │   ├── DateNavigator.tsx            # 【クライアント】日付遷移ボタンとカレンダー
+│   │   ├── DateTimePicker.tsx           # 【クライアント】カスタム日時ピッカー
+│   │   ├── EditDailyReportDialog.tsx    # 【クライアント】日時情報編集モーダル
+│   │   ├── EditScheduleDialog.tsx       # 【クライアント】船舶・荷役予定の編集/新規作成モーダル
+│   │   ├── GanttChart.tsx               # 【クライアント】PC版の船舶図（ガントチャート）
+│   │   ├── MemoEdit.tsx                 # 【クライアント】日次メモの編集/表示コンポーネント
+│   │   ├── MobileGanttChart.tsx         # 【クライアント】スマートフォン専用のスクロール追従型ガントチャート
+│   │   ├── MobileViewClient.tsx         # 【クライアント】スマートフォン画面のUIと状態管理の親コンポーネント
+│   │   └── ScheduleTable.tsx            # 【クライアント】荷役予定詳細テーブル
 │   ├── /lib/
 │   │   ├── /supabase/
-│   │   │   ├── actions.ts       # 【サーバー】Supabaseと連携する全てのサーバーアクション（DB操作関数）。
-│   │   │   └── server.ts        # サーバーコンポーネント/アクション用のSupabaseクライアントを生成するヘルパー。
-│   │   ├── constants.ts         # アプリ全体で共有する定数（荷役会社リスト、クレーンリストなど）。
-│   │   ├── coordinateConverter.ts # ビット表記とメートル座標を相互変換する計算ロジック。
-│   │   └── parser.ts            # テキストデータを解析し、DB保存用のJSONに変換するロジック。
+│   │   │   ├── actions.ts               # 【サーバー】Supabaseと連携する全てのサーバーアクション（DB操作関数）
+│   │   │   └── server.ts                # サーバー用のSupabaseクライアントを生成するヘルパー
+│   │   ├── constants.ts                 # アプリ全体で共有する定数（選択肢リスト、変換マップなど）
+│   │   ├── coordinateConverter.ts       # ビット表記とメートル座標を相互変換する計算ロジック
+│   │   └── parser.ts                    # テキストデータを解析し、DB保存用のJSONに変換するロジック
 │   └── /types/
-│       └── database.types.ts    # Supabase CLIによって自動生成される、DBスキーマのTypeScript型定義。
-├── .env.local                     # Supabase接続情報などの環境変数を定義するファイル (Git管理外)。
-├── next.config.js                 # Next.jsのプロジェクト設定ファイル。
-└── package.json                   # プロジェクトの依存関係とスクリプトを定義するファイル。
-各ファイルの概要説明
-/app (ルーティングとページ)
-/dashboard/[date]/page.tsx: URLの日付に基づいてデータを取得し、DashboardClientに渡すサーバーサイドの入り口。
-/dashboard/import/page.tsx: テキストデータを貼り付けて一括インポートを行うUI。クリップボードからの貼り付けやデータリセット機能も持つ。
-/print/[date]/page.tsx: 印刷用のデータを取得し、PrintPageClientに渡すサーバーサイドの入り口。
-/print/[date]/PrintPageClient.tsx: 通常画面のレイアウトを縮小してA4プレビューとして表示し、印刷ダイアログを起動する役割を持つ。
-/src/components (UIコンポーネント)
+│       └── database.types.ts            # Supabase CLIによって自動生成されるDBスキーマのTypeScript型定義
+├── .env.local                             # Supabase接続情報などの環境変数ファイル (Git管理外)
+├── middleware.ts                          # 【サーバーエッジ】認証チェックとリダイレクトを行う
+├── next.config.js                         # Next.jsのプロジェクト設定（PWA設定含む）
+└── package.json                         # プロジェクトの依存関係とスクリプト定義
+8.2. 各ファイルの概要説明
+/page.tsx: 【クライアント】アプリケーションのルート (/)。デバイス（PC/モバイル）を判別し、適切なトップページ (/home or /mobile/[今日の日付]) にリダイレクトする。
+/home/page.tsx: 【クライアント】PCユーザー向けのトップページ。主要機能へのリンクメニューを表示する。
+/login/page.tsx: 【クライアント】ログインフォームを表示するページ。Supabase Auth UIを利用。
+/dashboard/[date]/page.tsx: 【サーバー】PC版ダッシュボードのメインページ。URLの日付に基づいてサーバーサイドでデータを取得し、DashboardClientに渡す役割。
+/dashboard/import/page.tsx: 【クライアント】テキストデータを貼り付けて一括インポートを行うUI。
+/mobile/[date]/page.tsx: 【サーバー】スマートフォン専用の閲覧画面。URLの日付でデータを取得し、MobileViewClientに渡す。
+/print/[date]/page.tsx: 【サーバー】印刷用のデータを取得し、PrintPageClientに渡す。
+/print/layout.tsx: 印刷ページ専用の最小限のHTMLレイアウト。
+/print/print.css: 印刷専用のスタイルシート。
+/layout.tsx: アプリケーション全体のルートレイアウト。フォントや基本的なメタデータを定義。
+/icons/: PWAとしてホーム画面に追加されたときなどに使われるアプリアイコン。
+manifest.json: PWAの設定ファイル。アプリ名、テーマカラーなどを定義。
 /ui/: Shadcn/uiによって生成された、ボタンやテーブルなどの基本的なUI部品。
-DashboardClient.tsx: ダッシュボードの主要なクライアントサイドのロジック（モーダルの開閉管理など）を集約し、サーバーから受け取ったデータを各UIコンポーネントに渡す役割。
-GanttChart.tsx: schedulesデータを受け取り、SVGやdiv要素を使って視覚的なガントチャートを描画する。レスポンシブな幅計算も内包。
-ScheduleTable.tsx: schedulesデータを受け取り、詳細な情報をテーブル形式で表示する。行クリックやボタンクリックのイベントを持つ。
-EditScheduleDialog.tsx: 新規作成と編集の両方を担う高機能モーダル。入力値のバリデーションや、更新時のデータ整形なども行う。
-その他のコンポーネント: それぞれが特定の役割（日付選択、メモ編集など）を持つ、再利用可能なUI部品。
-/src/lib (コアロジックとヘルパー)
-/supabase/actions.ts: アプリケーションのバックエンドロジックの心臓部。 DBとのすべてのやり取り（読み取り、書き込み、更新、削除）は、このファイルに定義されたサーバーアクションを通じて行われる。
-constants.ts: アプリケーション全体で共通して使用する静的なデータ（選択肢のリストや変換マップなど）を定義。変更が発生した場合、このファイルを編集するだけで済む。
+AnchorInfoModal.tsx: 【クライアント】モバイル画面用。アンカー位置と極限位置の情報を表示するモーダル。
+DashboardClient.tsx: 【クライアント】PC版ダッシュボードの主要UIをまとめるコンテナ。モーダルの開閉などの状態管理も担当。
+DashboardHeader.tsx: 【クライアント】日付、当直者、風速情報を表示するヘッダー。
+DateNavigator.tsx: 【クライアント】日付遷移ボタンとカレンダーピッカー。basePath propsにより、PC版とモバイル版で遷移先を切り替える。
+DateTimePicker.tsx: 【クライアント】日付と15分刻みの時刻を選択するカスタムUI。
+EditDailyReportDialog.tsx: 【クライアント】日時情報（当直者、風速、メモ）を編集するモーダル。
+EditScheduleDialog.tsx: 【クライアント】船舶・荷役予定を編集・新規作成する高機能モーダル。
+GanttChart.tsx: 【クライアント】PC版の船舶図（ガントチャート）。レスポンシブな幅計算を内包。
+MemoEdit.tsx: 【クライアント】日次メモを表示・編集する専用コンポーネント。
+MobileGanttChart.tsx: 【クライアント】スマートフォン専用のガントチャート。横スクロールと固定軸表示に対応。
+MobileViewClient.tsx: 【クライアント】スマートフォン画面の主要UIをまとめるコンテナ。
+ScheduleTable.tsx: 【クライアント】荷役予定詳細を表示するテーブル。
+/supabase/actions.ts: 【サーバー】Supabaseと連携する全てのサーバーアクション（DB操作関数）。
+/supabase/server.ts: サーバーコンポーネント/アクション用のSupabaseクライアントを生成するヘルパー。
+constants.ts: アプリ全体で共有する定数（荷役会社リスト、クレーンリスト、プランナ変換マップなど）。
 coordinateConverter.ts: 港の物理的なビットとメートル座標を相互に変換するための、専門的かつ重要な計算ロジックをカプセル化。
-parser.ts: テキストデータという非構造化データを、DBに保存可能な構造化データ（JSON）に変換する、ETL処理の「Extract, Transform」部分を担う。
-/src/types (型定義)
-database.types.ts: SupabaseのDBスキーマとアプリケーションのTypeScriptコードを繋ぐ架け橋。DBスキーマを変更した後は、必ずCLIでこのファイルを再生成する必要がある。
+parser.ts: テキストデータを解析し、DB保存用のJSONに変換するロジック。
+database.types.ts: Supabase CLIによって自動生成される、DBスキーマのTypeScript型定義。DBスキーマ変更後は必ず再生成が必要。
+middleware.ts: 【サーバーエッジ】すべてのリクエストを監視し、未ログインユーザーを/loginにリダイレクトさせる認証保護のロジック。
+.env.local: Supabase接続情報などの環境変数を定義するファイル (Git管理外)。
+next.config.js: Next.jsのプロジェクト設定ファイル。PWAの設定もここに含まれる。
+package.json: プロジェクトの依存関係とスクリプトを定義するファイル。

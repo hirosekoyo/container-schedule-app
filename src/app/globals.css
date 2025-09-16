@@ -4,7 +4,7 @@
 
 html {
   overscroll-behavior: none;/* スクロールのバウンドを防ぐ */
-  scroll-behavior: auto;/* スクロールの慣性を防ぐ */
+  scroll-behavior: auto;/* スクロールの慣性を防ぐ(防げていない) */
 }
 
 @layer base {
