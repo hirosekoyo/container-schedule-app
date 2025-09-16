@@ -3,16 +3,12 @@
 @tailwind utilities;
 
 html {
-  overscroll-behavior: none;
-}
-
-body {
-  overscroll-behavior: none; /* スクロールのバウンドを防ぐ */
+  overscroll-behavior: none;/* スクロールのバウンドを防ぐ */
+  scroll-behavior: auto;/* スクロールの慣性を防ぐ */
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground;
-    overscroll-behavior: none; /* スクロールのバウンドを防ぐ */
   }
 }
