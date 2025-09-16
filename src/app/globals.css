@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  overscroll-behavior: none; /* スクロールのバウンドを防ぐ */
+}
+
 @layer base {
   body {
     @apply bg-background text-foreground;
