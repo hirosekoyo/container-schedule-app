@@ -166,7 +166,7 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
                     </div>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-80" side="right" align="center">
+                <PopoverContent className="w-80" side="top" align="center">
                   <ScheduleDetailPopoverContent schedule={schedule} />
                 </PopoverContent>
               </Popover>
