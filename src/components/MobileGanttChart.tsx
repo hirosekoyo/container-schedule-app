@@ -65,7 +65,7 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
   };
 
   const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
-  const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i); // 32 -> 33 (33から65まで)
+  const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i);
   const HOUR_HEIGHT_PX = 40;
   const BIT_WIDTH_PX = 56;
   const totalChartWidth = (bitLabels.length) * BIT_WIDTH_PX;
@@ -103,7 +103,7 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
           ))}
         </div>
       </div>
-      <div ref={contentAreaRef} className="overflow-auto">
+      <div ref={contentAreaRef} className="overflow-auto overscroll-behavior-none">
         <div className="relative" style={{ width: totalChartWidth, height: totalChartHeight }}>
           <div className="absolute inset-0">
             {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}

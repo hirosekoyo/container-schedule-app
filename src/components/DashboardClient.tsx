@@ -47,7 +47,11 @@ export function DashboardClient({
         {/* 印刷時ではない場合のみ、ナビゲーションボタンを表示 */}
         {!isPrintView && (
           <div className="flex items-center gap-4">
-            <DateNavigator currentDate={date} importId={currentImportId} />
+            <DateNavigator 
+             currentDate={date} 
+             importId={currentImportId} 
+             basePath="/dashboard" // basePathを指定
+            />
             <Button variant="outline" onClick={() => window.open(`/print/${date}`, '_blank')}>
               <Printer className="mr-2 h-4 w-4" /> 印刷
             </Button>

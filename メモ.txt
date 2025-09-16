@@ -11,6 +11,10 @@
  
 実装したい アイデア
 
+ ○ Compiling /mobile/[date] ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled /mobile/[date] in 8.2s (2655 modules)
+
 スマホ用の画面は当日を初期表示するようにして、船をタップすると荷役情報を表示する。　
 スマホのページを初期ページにする。
  
@@ -43,9 +47,13 @@ hakata@futo.com
 ・スマホの画面サイズに最適化されたガントチャートを表示する。
 ・船舶をタップすると、予定編集モーダルではなく、該当する荷役予定詳細の項目と同じデータをスマホに最適化されてモーダルで表示します。
 
-
 いい感じですが、追加の修正をお願いします。
 ・縦軸の時間が16時までしか表示されておらずスクロールに追従していないので修正してください。
 ・縦軸の時間は左側に横軸のビット番号は上側に常に固定表示して、ガントチャートの罫線と同じようにスクロールに追従するようにしてください。
 ・モーダルは画面を占有するのではなく、船舶から吹き出しのように出す。
 ・モーダルを開いてもスクロールができて、次の船をタップすると、前の吹き出しを閉じてタップした船の吹き出しを表示する。
+
+PWA対応させて、start_urlはh/mobile/当日の日付　にしたいです。
+DateNavigatorの右側に情報ボタンを追加して、押すとsrc\lib\constants.tsで定義したアンカー位置と、極限位置をを表にしたモーダルを表示させてください。
+
+
