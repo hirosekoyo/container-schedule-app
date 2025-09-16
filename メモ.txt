@@ -53,7 +53,14 @@ hakata@futo.com
 ・モーダルは画面を占有するのではなく、船舶から吹き出しのように出す。
 ・モーダルを開いてもスクロールができて、次の船をタップすると、前の吹き出しを閉じてタップした船の吹き出しを表示する。
 
-PWA対応させて、start_urlはh/mobile/当日の日付　にしたいです。
+PWA対応させてください。
+・start_urlは/mobile/当日の日付　にしたいです。
+・アドレスバーは表示されないようにして、スクロールによるバウンスも抑制してください。
+
 DateNavigatorの右側に情報ボタンを追加して、押すとsrc\lib\constants.tsで定義したアンカー位置と、極限位置をを表にしたモーダルを表示させてください。
 
+
+https://maskable.app/editor
+https://www.pwabuilder.com/imageGenerator
+アイコン作成サイト
 
