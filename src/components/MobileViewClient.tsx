@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react'; // useEffectをインポート
+import React, { useState, useEffect } from 'react';
 import { DateNavigator } from '@/components/DateNavigator';
 import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import { MobileGanttChart } from './MobileGanttChart';
-import { useRouter } from 'next/navigation'; // useRouterをインポート
+import { useRouter } from 'next/navigation';
+import { AnchorInfoModal } from './AnchorInfoModal'; // 1. 新しいモーダルをインポート
+import { Button } from './ui/button'; // Buttonをインポート
+import { Anchor } from 'lucide-react'; // 錨アイコンをインポート
 
 interface MobileViewClientProps {
   initialReport: DailyReport | null;
@@ -18,28 +21,20 @@ export function MobileViewClient({
   date,
 }: MobileViewClientProps) {
   const router = useRouter();
+  // 2. 新しいモーダル用のstateを追加
+  const [isAnchorModalOpen, setIsAnchorModalOpen] = useState(false);
 
-  // --- 【ここからが新設箇所】 ---
   useEffect(() => {
     const handleVisibilityChange = () => {
-      // ページが非表示から表示に切り替わったとき
       if (document.visibilityState === 'visible') {
-        console.log("Tab is active again, refreshing data...");
-        // サーバーから最新のデータを再取得してページを再レンダリングする
         router.refresh();
       }
     };
-
-    // イベントリスナーを登録
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // コンポーネントがアンマウントされるときにイベントリスナーを解除
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [router]); // 依存配列にrouterを追加
-  // --- 【ここまで】 ---
-
+  }, [router]);
 
   const displayDate = new Date(date).toLocaleDateString('ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
@@ -52,11 +47,21 @@ export function MobileViewClient({
         <p className="text-sm text-center text-gray-600">
           当直: {initialReport?.primary_staff || '-'}, {initialReport?.secondary_staff || '-'}
         </p> */}
-        <div className="mt-4">
-          <DateNavigator 
-            currentDate={date} 
-            basePath="/mobile"
-          />
+        <div className="mt-4 flex items-center gap-2">
+          <div className="flex-grow">
+            <DateNavigator 
+              currentDate={date} 
+              basePath="/mobile"
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setIsAnchorModalOpen(true)}
+            className="flex-shrink-0"
+          >
+            <Anchor className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
@@ -66,6 +71,11 @@ export function MobileViewClient({
           baseDate={date}
         />
       </main>
+      
+      <AnchorInfoModal 
+        open={isAnchorModalOpen}
+        onOpenChange={setIsAnchorModalOpen}
+      />
     </>
   );
 }

@@ -36,9 +36,22 @@ data_hashをberth_number、arrival_time、departure_time、arrival_side、bow_po
 hakata@futo.com
 373150
 
-DateNavigatorの右側に情報ボタンを追加して、押すとsrc\lib\constants.tsで定義したアンカー位置と、極限位置をを表にしたモーダルを表示させてください。
+DateNavigatorの右側に錨のマークのボタンを追加してください。ボタンを押すとアンカー位置と、極限位置を表にしたモーダル（新規作成）を表示させてください。
+以下が表の内容です。
+アンカー位置
+縦軸、1,2,3,4,5,6,7,8,9,10
+横軸、35.5,39.0,40.0,44.5,48.5,51.5,52.5,55.5,60.5,63.5
 
-モバイル画面は、バックグラウンドなどから復帰した時に最新データを取得する処理を追加してください。
+極限位置
+横軸　左、右
+    { 縦軸: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
+    { 縦軸: 'IC-2', right: '40ft:36+1\n20ft:36+4', left: '?' },
+    { 縦軸: 'IC-3', right: 'IC-2横', left: '右脚56±00' },
+    { 縦軸: 'IC-4', right: '左脚38±00', left: '右脚61±00' },
+    { 縦軸: 'IC-5', right: '左脚45±00', left: '40ft:63-9\n20ft:63-6' },
+    { 縦軸: 'IC-6', right: '左脚47-15', left: '40ft:64-7\n20ft:64-10' },
+
+
 
 https://maskable.app/editor
 https://www.pwabuilder.com/imageGenerator
