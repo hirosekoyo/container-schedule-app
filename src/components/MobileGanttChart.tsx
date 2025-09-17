@@ -212,7 +212,7 @@ export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom
                   <PopoverContent 
                     className="w-full max-w-xs sm:w-72"
                     side="top"
-                    align="start"
+                    align="end"
                     collisionPadding={8}
                     // 指で隠れないように、アンカー（タップ位置）から少し離す
                     sideOffset={12} 
