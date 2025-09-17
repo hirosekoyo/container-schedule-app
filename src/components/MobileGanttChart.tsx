@@ -146,9 +146,14 @@ export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom
             const bow_m = Number(schedule.bow_position_m);
             const stern_m = Number(schedule.stern_position_m);
             const chartStart_m = bitNotationToMeters(`${33}`)!;
-            let left_m = Math.min(bow_m, stern_m);
-            if (left_m < chartStart_m) left_m = chartStart_m;
-            const width_m = Math.max(bow_m, stern_m) - left_m;
+            const chartEnd_m = bitNotationToMeters(`${65}`)!;
+            if (Math.max(bow_m, stern_m) < chartStart_m) {
+              return null;
+            }
+            const left_m = Math.max(Math.min(bow_m, stern_m), chartStart_m);
+            const right_m = Math.min(Math.max(bow_m, stern_m), chartEnd_m);
+            const width_m = right_m - left_m;
+            if (width_m <= 0) return null;
             const left_bit = metersToBitPosition(left_m);
             const right_bit = metersToBitPosition(left_m + width_m);
             const left = (left_bit - CHART_START_BIT) * BIT_WIDTH_PX;
