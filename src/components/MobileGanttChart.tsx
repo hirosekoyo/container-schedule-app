@@ -5,13 +5,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
-import { Button } from './ui/button';
-import { ZoomIn, ZoomOut } from 'lucide-react';
 
-// --- Propsの定義 ---
 interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
+  isZoomedIn: boolean;
+  onToggleZoom: () => void;
+  viewSize: { width: number, height: number }; // 親からサイズを受け取る
 }
 
 // --- ヘルパー関数 ---
@@ -60,22 +60,34 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
   </div>
 );
 
-// --- メインコンポーネント ---
-export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps) {
+export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom, viewSize }: MobileGanttChartProps) {
   const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
-  const [isZoomedIn, setIsZoomedIn] = useState(false);
-  
-  const togglePopover = (scheduleId: number) => {
+    const togglePopover = (scheduleId: number) => {
     setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [...prev, scheduleId]);
   };
-  const toggleZoom = () => setIsZoomedIn(prev => !prev);
 
   const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
   const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i);
-  const HOUR_HEIGHT_PX = isZoomedIn ? 40 : 12;
-  const BIT_WIDTH_PX = isZoomedIn ? 56 : 16;
-  const totalChartWidth = (bitLabels.length) * BIT_WIDTH_PX;
+  const CHART_START_BIT = 33;
+  
+  // --- 【ここからが修正箇所】 ---
+  // ズーム状態に応じて、ビット幅と時間の高さを計算
+  const AXIS_LABEL_WIDTH = 32; // 2rem
+  const AXIS_LABEL_HEIGHT = 28; // 1.75rem
+
+  const scrollModeBitWidth = 56;
+  const scrollModeHourHeight = 40;
+
+  const fullViewBitWidth = (viewSize.width - AXIS_LABEL_WIDTH) / bitLabels.length;
+  const fullViewHourHeight = (viewSize.height - AXIS_LABEL_HEIGHT) / (timeLabels.length * 2 - 2);
+
+  const BIT_WIDTH_PX = isZoomedIn ? scrollModeBitWidth : fullViewBitWidth;
+  const HOUR_HEIGHT_PX = isZoomedIn ? scrollModeHourHeight : fullViewHourHeight;
+  
+  const totalChartWidth = bitLabels.length * BIT_WIDTH_PX;
   const totalChartHeight = (timeLabels.length - 1) * 2 * HOUR_HEIGHT_PX;
+  // --- 【ここまで】 ---
+
 
   const topAxisRef = useRef<HTMLDivElement>(null);
   const leftAxisRef = useRef<HTMLDivElement>(null);
@@ -93,14 +105,9 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
   }, [isZoomedIn]);
 
   return (
-    <div className="grid h-full w-full" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '1.75rem 1fr' }}>
-      <div className="bg-white z-20 border-b border-r border-gray-200 flex items-center justify-center">
-        {/* モード切替ボタンを左上の角に配置 */}
-        <Button variant="ghost" size="icon" onClick={toggleZoom} className="h-6 w-6">
-          {isZoomedIn ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
-        </Button>
-      </div>
-      <div ref={topAxisRef} className={`${isZoomedIn ? 'overflow-hidden' : ''} bg-white z-10 border-b border-gray-200`}>
+    <div className="grid h-full w-full" style={{ gridTemplateColumns: `${AXIS_LABEL_WIDTH}px 1fr`, gridTemplateRows: `${AXIS_LABEL_HEIGHT}px 1fr` }}>
+      <div className="bg-white z-20 border-b border-r border-gray-200"></div>
+      <div ref={topAxisRef} className="overflow-hidden bg-white z-10 border-b border-gray-200">
         <div className="relative" style={{ width: totalChartWidth, height: '100%' }}>
           {bitLabels.map((label, i) => (
             <div key={`bl-${i}`} className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-sm text-gray-700 transition-opacity ${
@@ -109,7 +116,7 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
           ))}
         </div>
       </div>
-      <div ref={leftAxisRef} className={`${isZoomedIn ? 'overflow-hidden' : ''} bg-white z-10 border-r border-gray-200`}>
+      <div ref={leftAxisRef} className="overflow-hidden bg-white z-10 border-r border-gray-200">
         <div className="relative" style={{ width: '100%', height: totalChartHeight }}>
           {timeLabels.map((label, i) => (
             <div key={`tl-${i}`} className={`absolute -translate-y-1/2 text-xs text-gray-500 transition-opacity ${
@@ -120,9 +127,9 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
       </div>
       <div ref={contentAreaRef} 
            className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none`}
-           onDoubleClick={toggleZoom}
+           onDoubleClick={onToggleZoom}
       >
-        <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
+        <div className="relative" style={{ width: totalChartWidth, height: totalChartHeight }}>
           <div className="absolute inset-0">
             {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
             {bitLabels.map((_, i) => <div key={`v-${i}`} className="absolute h-full border-l border-gray-100" style={{ left: i * BIT_WIDTH_PX }} />)}
@@ -147,15 +154,15 @@ export function MobileGanttChart({ schedules, baseDate }: MobileGanttChartProps)
             return (
               <Popover key={schedule.id} open={openPopoverIds.includes(schedule.id)} onOpenChange={() => togglePopover(schedule.id)}>
                 <PopoverTrigger asChild>
-                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: '28px' }}>
-                    <div className="flex items-center gap-1 text-[10px] font-bold break-words text-center">
+                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: isZoomedIn ? 28 : 0 }}>
+                    <div className={`flex items-center gap-1 text-[10px] font-bold break-words text-center ${!isZoomedIn ? 'text-[8px] leading-tight' : 'text-[10px]'}`}>
                       <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
                       <span className={!isZoomedIn && width < 40 ? 'opacity-0' : ''}>{schedule.ship_name}</span>
                       <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
                     </div>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="w-80" side="top" align="center">
+                 <PopoverContent className="w-80" side="top" align="center">
                   <ScheduleDetailPopoverContent schedule={schedule} />
                 </PopoverContent>
               </Popover>
