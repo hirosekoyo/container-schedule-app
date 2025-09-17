@@ -171,6 +171,7 @@ export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom
                   // 画面の端との衝突を検知した際の挙動を設定
                   collisionPadding={1} // 画面の端から8pxの余白を確保
                   sideOffset={1} // トリガー要素からの距離
+                  sticky="always" 
                 >
                   <ScheduleDetailPopoverContent schedule={schedule} />
                 </PopoverContent>
