@@ -64,10 +64,10 @@ export function MobileViewClient({
   return (
     <>
       <header className="p-4 border-b">
-        <h1 className="text-xl font-bold text-center">{displayDate}</h1>
+        {/* <h1 className="text-xl font-bold text-center">{displayDate}</h1>
         <p className="text-sm text-center text-gray-600">
           当直: {initialReport?.primary_staff || '-'}, {initialReport?.secondary_staff || '-'}
-        </p>
+        </p> */}
         <div className="mt-4 flex items-center gap-2">
           <div className="flex-grow"><DateNavigator currentDate={date} basePath="/mobile" /></div>
           <Button variant="outline" size="icon" onClick={toggleZoom} className="flex-shrink-0">
