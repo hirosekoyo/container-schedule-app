@@ -5,6 +5,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+// 【変更点2】Radix UI から直接 Popover, PopoverAnchor, PopoverPortal をインポート
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 
 // --- Propsの定義 ---
@@ -163,19 +165,26 @@ export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom
                     </div>
                   </div>
                 </PopoverTrigger>
-                {/* --- 【ここからが修正箇所】 --- */}
-                <PopoverContent 
-                  className="w-80" 
-                  side="top" 
-                  align="center"
-                  // 画面の端との衝突を検知した際の挙動を設定
-                  collisionPadding={1} // 画面の端から8pxの余白を確保
-                  sideOffset={1} // トリガー要素からの距離
-                  sticky="always" 
-                >
-                  <ScheduleDetailPopoverContent schedule={schedule} />
-                </PopoverContent>
-                {/* --- 【ここまで修正】 --- */}
+
+                <PopoverPrimitive.Anchor
+                  className="absolute"
+                  style={{
+                    top: top + height / 2, // バーの垂直方向の中央
+                    left: left + width / 2   // バーの水平方向の中央
+                  }}
+                />
+                <PopoverPrimitive.Portal container={contentAreaRef.current}>
+                  <PopoverContent
+                    // collisionBoundary は不要になるか、あっても良い
+                    className="w-full max-w-xs sm:w-72"
+                    side="left"
+                    align="center"
+                    collisionPadding={8}
+                    sideOffset={1}
+                  >
+                    <ScheduleDetailPopoverContent schedule={schedule} />
+                  </PopoverContent>
+                </PopoverPrimitive.Portal>
               </Popover>
             );
           })}
