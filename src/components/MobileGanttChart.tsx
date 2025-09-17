@@ -65,8 +65,28 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
 
 export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom, viewSize }: MobileGanttChartProps) {
   const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
-    const togglePopover = (scheduleId: number) => {
+  // --- 【変更点1】タップ位置を保存するstateを追加 ---
+  const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
+
+  const togglePopover = (scheduleId: number) => {
     setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [...prev, scheduleId]);
+  };
+  
+  // --- 【変更点2】タップイベントのハンドラを定義 ---
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // コンテンツエリアのrefが存在しない場合は何もしない
+    if (!contentAreaRef.current) return;
+
+    // コンテンツエリアの画面上の位置とサイズを取得
+    const contentAreaRect = contentAreaRef.current.getBoundingClientRect();
+    
+    // ビューポート基準のタップ座標 (event.clientX, event.clientY) を
+    // コンテンツエリア基準の相対座標に変換（スクロール位置も考慮）
+    const top = event.clientY - contentAreaRect.top + contentAreaRef.current.scrollTop;
+    const left = event.clientX - contentAreaRect.left + contentAreaRef.current.scrollLeft;
+    
+    // 計算した座標をstateに保存
+    setAnchorPosition({ top, left });
   };
 
   const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
@@ -160,37 +180,47 @@ export function MobileGanttChart({ schedules, baseDate, isZoomedIn, onToggleZoom
             const width = (right_bit - left_bit) * BIT_WIDTH_PX;
 
             return (
-              <Popover key={schedule.id} open={openPopoverIds.includes(schedule.id)} onOpenChange={() => togglePopover(schedule.id)}>
+              <PopoverPrimitive.Root 
+                key={schedule.id}
+                open={openPopoverIds.includes(schedule.id)}
+                onOpenChange={() => togglePopover(schedule.id)}
+              >
                 <PopoverTrigger asChild>
-                  <div className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" style={{ top, height, left, width, minWidth: isZoomedIn ? 28 : 0 }}>
+                  <div 
+                    className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" 
+                    style={{ top, height, left, width, minWidth: isZoomedIn ? 28 : 0 }}
+                    onPointerDown={handlePointerDown} // PointerDownイベントでタップ位置を取得
+                  >
                     <div className={`flex items-center gap-1 font-bold break-words text-center ${!isZoomedIn ? 'text-[8px] leading-tight' : 'text-[10px]'}`}>
                       <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
-                      <span>{schedule.ship_name}</span>
+                      <span className={isZoomedIn ? 'text-xs' : ''}>
+                        {schedule.ship_name}
+                      </span>
                       <span>{schedule.arrival_side === '右舷' ? '→' : ''}</span>
                     </div>
                   </div>
                 </PopoverTrigger>
-
-                <PopoverPrimitive.Anchor
-                  className="absolute"
-                  style={{
-                    top: top + height / 2, // バーの垂直方向の中央
-                    left: left + width / 2   // バーの水平方向の中央
-                  }}
+                
+                <PopoverPrimitive.Anchor 
+                  className="absolute" 
+                  style={{ 
+                    top: anchorPosition.top,
+                    left: anchorPosition.left
+                  }} 
                 />
                 <PopoverPrimitive.Portal container={contentAreaRef.current}>
-                  <PopoverContent
-                    // collisionBoundary は不要になるか、あっても良い
+                  <PopoverContent 
                     className="w-full max-w-xs sm:w-72"
-                    side="left"
-                    align="center"
+                    side="top"
+                    align="start"
                     collisionPadding={8}
-                    sideOffset={1}
+                    // 指で隠れないように、アンカー（タップ位置）から少し離す
+                    sideOffset={12} 
                   >
                     <ScheduleDetailPopoverContent schedule={schedule} />
                   </PopoverContent>
                 </PopoverPrimitive.Portal>
-              </Popover>
+              </PopoverPrimitive.Root>
             );
           })}
         </div>
