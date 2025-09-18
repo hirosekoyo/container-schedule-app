@@ -154,7 +154,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 className={`${rowClassName} ${interactivityClasses}`}
                 onClick={() => !isPrintView && onScheduleClick(schedule)}
               >
-                  <TableCell className={getCellClass('berth_number')}>{schedule.berth_number}岸</TableCell>
+                  <TableCell className={getCellClass('berth_number')}>{`${schedule.berth_number}${isPrintView ? '' : '岸'}`}</TableCell>
                   <TableCell className={`font-medium ${getCellClass('ship_name')}`}>{schedule.ship_name}</TableCell>
                   <TableCell className={getCellClass('arrival_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
                   <TableCell className={getCellClass('departure_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
