@@ -12,3 +12,63 @@ html {
     @apply bg-background text-foreground;
   }
 }
+
+/* --- 船と波のアニメーション (ここから) --- */
+
+/* 船の上下の動きを、波に合わせて少し大きくします */
+@keyframes ship-bob {
+  0%, 100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1.5deg);
+  }
+}
+
+/* 波が横に滑らかに流れ続けるためのキーフレーム */
+@keyframes wave-flow {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* 要素の幅が200%なので、-50%移動するとちょうど1周して繋がります */
+    transform: translateX(-50%);
+  }
+}
+
+/* 波が上下にうねるためのキーフレーム */
+@keyframes wave-undulate {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Tailwindのアニメーションとして登録 */
+@layer utilities {
+  .animate-ship-bob {
+    /* 船の揺れを少し速くします */
+    animation: ship-bob 3s ease-in-out infinite;
+  }
+  
+  /* 3層の波にそれぞれ異なるアニメーションを適用します */
+  .animate-wave-1 {
+    /* 奥の波: ゆっくり流れる + 小さくうねる */
+    animation: wave-flow 12s linear infinite, wave-undulate 5s ease-in-out infinite;
+    animation-delay: 0s, -2s; /* 1つ目がflow, 2つ目がundulateの遅延 */
+  }
+  .animate-wave-2 {
+    /* 真ん中の波: 少し速く、逆方向に流れる + 中くらいのうねり */
+    animation: wave-flow 10s linear infinite reverse, wave-undulate 4s ease-in-out infinite;
+    animation-delay: 0s, -3s;
+  }
+  .animate-wave-3 {
+    /* 手前の波: 最も速い + 大きくうねる */
+    animation: wave-flow 8s linear infinite, wave-undulate 3s ease-in-out infinite;
+    animation-delay: 0s, -1.5s;
+  }
+}
+
+/* --- 船と波のアニメーション (ここまで) --- */
