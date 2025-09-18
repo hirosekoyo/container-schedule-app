@@ -13,27 +13,22 @@ html {
   }
 }
 
-/* --- 船と波のアニメーション (ここから) --- */
-
-/* 船の上下の動きを、波に合わせて少し大きくします */
+/* 船の上下の動き (小さく速く) */
 @keyframes ship-bob {
   0%, 100% {
-    transform: translateY(0) rotate(-1.5deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-12px) rotate(1.5deg);
+    transform: translateY(-3px);
   }
 }
-
 
 /* Tailwindのアニメーションとして登録 */
 @layer utilities {
   .animate-ship-bob {
-    /* 船の揺れを少し速くします */
-    animation: ship-bob 3s ease-in-out infinite;
+    animation: ship-bob 0.3s ease-in-out infinite;
     will-change: transform;
   }
-  
 }
 
-/* --- 船と波のアニメーション (ここまで) --- */
+/* --- 船のアニメーション (ここまで) --- */
