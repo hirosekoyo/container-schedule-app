@@ -5,6 +5,8 @@
 html {
   overscroll-behavior: none;/* スクロールのバウンドを防ぐ */
   scroll-behavior: auto;/* スクロールの慣性を防ぐ(防げていない) */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 @layer base {
