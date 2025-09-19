@@ -1,7 +1,7 @@
 {
-  "name": "コンテナ船荷役予定管理",
-  "short_name": "荷役予定",
-  "description": "コンテナ船の荷役予定を管理するアプリケーションです。",
+  "name": "船舶動静",
+  "short_name": "船舶動静",
+  "description": "荷役予定を管理するアプリケーションです。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
