@@ -5,6 +5,8 @@
 html {
   overscroll-behavior: none;/* スクロールのバウンドを防ぐ */
   scroll-behavior: auto;/* スクロールの慣性を防ぐ(防げていない) */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 @layer base {
@@ -12,3 +14,23 @@ html {
     @apply bg-background text-foreground;
   }
 }
+
+/* 船の上下の動き (小さく速く) */
+@keyframes ship-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Tailwindのアニメーションとして登録 */
+@layer utilities {
+  .animate-ship-bob {
+    animation: ship-bob 0.3s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
+/* --- 船のアニメーション (ここまで) --- */
