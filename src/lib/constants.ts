@@ -35,5 +35,7 @@ export const PLANNER_TO_STEVEDORE_MAP: { [key: string]: string } = {
   '日通ターミナル事業所': 'NEC',
   '博多港ふ頭㈱バース': 'ふ頭',
   'ホームリンガ商会': 'KAM',
+  '上組福岡支店': 'KAM',
+  'ベンライン': 'KAM',
   '三菱倉庫福岡支店': 'MIT',
 };
