@@ -102,7 +102,7 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
         <DialogHeader>
           <DialogTitle>日次レポート編集</DialogTitle>
           <DialogDescription>
-            {report_date} の当直者と風速情報、メモを入力してください。
+            {report_date} の当直者と風速情報を入力してください。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">

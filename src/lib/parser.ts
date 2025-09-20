@@ -18,7 +18,7 @@ const REGEX_MAP = {
 
 const determineBerthNumber = (bow_m: number, stern_m: number): number => {
   const midpoint_m = (bow_m + stern_m) / 2;
-  const BERTH_5_END_M = bitNotationToMeters('35+15')!;
+  const BERTH_5_END_M = bitNotationToMeters('35-10')!;
   const BERTH_6_END_M = bitNotationToMeters('45+15')!;
   const BERTH_7_END_M = bitNotationToMeters('57+15')!;
 

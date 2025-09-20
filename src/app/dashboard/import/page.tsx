@@ -28,7 +28,7 @@ export default function ImportPage() {
   const [isResetting, startResetTransition] = useTransition();
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const router = useRouter();
-  
+
   const tomorrow = new Date();
   tomorrow.setDate(new Date().getDate() + 1);
   const tomorrowDateString = formatDate(tomorrow);
@@ -60,7 +60,7 @@ export default function ImportPage() {
 
   const handleReset = () => {
     setMessage(null);
-    if (window.confirm("本当にすべてのスケジュールデータと、昨日以前の当直データ等を削除しますか？\nこの操作は元に戻すことができません。")) {
+    if (window.confirm("本当にすべてのスケジュールデータと、昨日以前の当直データを削除しますか？\nこの操作は元に戻すことができません。")) {
       startResetTransition(async () => {
         const { error } = await resetScheduleData();
         if (error) {
@@ -106,14 +106,14 @@ export default function ImportPage() {
           </Button>
         </header>
 
-       <Collapsible className="rounded-lg border border-destructive/50 bg-destructive/10 px-4">
+        <Collapsible className="rounded-lg border border-destructive/50 bg-destructive/10 px-4">
           <CollapsibleTrigger className="flex w-full items-center justify-between py-3 font-semibold text-destructive">
             <span>データリセット : 新規作成時のみ実行してください。（土日や連休中は行わない！）</span>
             <ChevronRight className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-90" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pb-4">
             <p className="text-sm text-destructive/90 mb-4">
-              すべての船舶予定と、昨日以前の当直データ等を完全に削除します。この操作は元に戻せません。
+              すべての船舶予定と、昨日以前の当直データを完全に削除します。この操作は元に戻せません。
             </p>
             <Button
               variant="destructive"
@@ -125,7 +125,7 @@ export default function ImportPage() {
             </Button>
           </CollapsibleContent>
         </Collapsible>
-        
+
         <Card className="w-full shadow-lg">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -143,7 +143,18 @@ export default function ImportPage() {
             <Textarea
               id="import-text"
               className="h-96 min-h-[300px] font-mono text-sm focus-visible:ring-blue-400"
-              placeholder="ここに船舶予定のテキストデータを貼り付けます..."
+              placeholder={"貼り付け例" +
+                "\n" +
+                "\n45MSC RICCARDA II入港予定09/26 03:45" +
+                "\n09/29 04:45～09/29 15:00" +
+                "\n全長180.35　m" +
+                "\n綱位置(首-尾)(48～56)" +
+                "\n船尾ビット55+5m" +
+                "\n代理店ホームリンガ商会" +
+                "\n荷役会社上組" +
+                "\n揚荷G.C." +
+                "\n積荷G.C...."
+              }
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
             />

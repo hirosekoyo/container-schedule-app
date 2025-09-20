@@ -5,14 +5,14 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "コンテナ船荷役予定管理",
-  description: "コンテナ船の荷役予定を管理するアプリケーション",
+  title: "動静表作成ツール",
+  description: "荷役予定を管理するアプリケーション",
   // --- 【ここからが追加箇所】 ---
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "荷役予定",
+    title: "船舶動静",
   },
   // --- 【ここまで】 ---
 };
