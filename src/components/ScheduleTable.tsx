@@ -173,7 +173,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
-                  <TableCell className="whitespace-pre-wrap align-middle">{schedule.remarks || ''}</TableCell>
+                  <TableCell className="whitespace-pre-wrap align-middle break-words">{schedule.remarks || ''}</TableCell>
                   
                   {!isPrintView && (
                     <TableCell className="text-center align-middle">

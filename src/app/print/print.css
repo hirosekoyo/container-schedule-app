@@ -32,7 +32,8 @@
   height: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 11cm auto 1fr;
+  /* 5つの行の高さを定義。最後のメモだけが残りのスペースを埋めるようにする */
+  grid-template-rows: auto 11cm auto auto 1fr;
   gap: 0.5rem;
 }
 

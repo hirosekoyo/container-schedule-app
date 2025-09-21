@@ -118,9 +118,9 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <a 
-                href="#" // ここにCanvaなどの使い方ガイドのURLを入れます
-                target="_blank" 
+              <a
+                href="/pdf/how_to_use.pdf"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="w-full"
               >
