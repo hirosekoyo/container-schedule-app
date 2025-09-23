@@ -1,6 +1,6 @@
 "use client";
 
-import type { ScheduleWithOperations } from '@/lib/supabase/actions';
+import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useEffect, useRef } from 'react';
 import { metersToBitPosition, bitNotationToMeters } from '@/lib/coordinateConverter';
 
@@ -11,6 +11,7 @@ interface GanttChartProps {
   onScheduleClick: (schedule: ScheduleWithOperations) => void;
   isPrintView?: boolean;
   printWidth?: number;
+  report: DailyReport | null;
 }
 const CHART_START_HOUR = 0;
 const CHART_END_HOUR = 26;
@@ -38,12 +39,15 @@ const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string
   return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
 };
 
-const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId, onScheduleClick, isPrintView = false, printWidth }) => {
-  const timeLabels = Array.from({ length: TOTAL_CHART_HOURS / 2 + 1 }, (_, i) => {
-    const hour = CHART_START_HOUR + i * 2;
-    if (hour >= 26) return hour - 24;
-    return hour;
+const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId, onScheduleClick, isPrintView = false, printWidth, report }) => {
+  const hourLines = Array.from({ length: TOTAL_CHART_HOURS + 1 }, (_, i) => CHART_START_HOUR + i);
+
+  const timeLabels = Array.from({ length: Math.floor(TOTAL_CHART_HOURS / 3) + 1 }, (_, i) => {
+    const hour = CHART_START_HOUR + i * 3;
+    const label = hour === 24 ? '24' : hour > 24 ? hour - 24 : hour;
+    return { hour, label };
   });
+  
   const bitLabels = Array.from({ length: CHART_END_BIT - CHART_START_BIT + 1 }, (_, i) => CHART_START_BIT + i);
   
   const graphAreaRef = useRef<HTMLDivElement>(null);
@@ -62,9 +66,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
     resizeObserver.observe(graphElement);
     return () => resizeObserver.unobserve(graphElement);
   }, [isPrintView, printWidth]);
-
-  const numberOfBits = CHART_END_BIT - CHART_START_BIT + 1;
-  const dynamicBitWidth = graphAreaWidth > 0 ? graphAreaWidth / numberOfBits : 0;
+  
+  // 描画エリアの幅をビットの「区間」の数 (31) で割る
+  const numberOfBitIntervals = CHART_END_BIT - CHART_START_BIT;
+  const dynamicBitWidth = graphAreaWidth > 0 ? graphAreaWidth / numberOfBitIntervals : 0;
 
   const craneStops = [
     { id: 1, text: '1', position: 35.5 }, { id: 2, text: '2', position: 39.0 },
@@ -74,81 +79,100 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
     { id: 9, text: '9', position: 60.5 }, { id: 10, text: '10', position: 63.5 },
   ];
 
+  const getWindColorClass = (speed: number | null | undefined): string => {
+    if (speed == null) return '';
+    if (speed >= 20) return 'bg-red-200/50';
+    if (speed >= 16) return 'bg-orange-200/50';
+    if (speed >= 10) return 'bg-yellow-200/50';
+    return '';
+  };
+  
+  const windData = report ? [
+    { start: 0,  end: 3,  speed: report.wind_speed_1 },
+    { start: 3,  end: 6,  speed: report.wind_speed_2 },
+    { start: 6,  end: 9,  speed: report.wind_speed_3 },
+    { start: 9,  end: 12, speed: report.wind_speed_4 },
+    { start: 12, end: 15, speed: report.wind_speed_5 },
+    { start: 15, end: 18, speed: report.wind_speed_6 },
+    { start: 18, end: 21, speed: report.wind_speed_7 },
+    { start: 21, end: 24, speed: report.wind_speed_8 },
+  ] : [];
+
   return (
-    <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr', gridTemplateRows: '3rem 1fr' }}>
+    <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr 3.5rem', gridTemplateRows: '3rem 1fr' }}>
       <div></div>
       <div className="relative">
+        {/* ▼▼▼ 修正点1: ラベルと線の位置を統一 ▼▼▼ */}
         {bitLabels.map((label, i) => (
-          <div key={`bit-label-${i}`} className="absolute bottom-0 -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>
+          <div key={`bit-label-${label}`} className="absolute bottom-0 -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>
             {label}
           </div>
         ))}
         {graphAreaWidth > 0 && craneStops.map((stop) => {
             const leftPosition = (stop.position - CHART_START_BIT) * dynamicBitWidth;
-            const boxWidth = dynamicBitWidth * 0.8;
+            const boxWidth = dynamicBitWidth; // ボックス幅を1ビット分に
             return (
-              <div
-                key={`crane-${stop.id}`}
-                className="absolute top-0 flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700"
-                style={{
-                  left: `calc(${leftPosition}px - ${boxWidth / 2}px)`,
-                  width: `${boxWidth}px`,
-                  height: '1.5rem',
-                }}
-              >
-                {stop.text}
-              </div>
+              <div key={`crane-${stop.id}`} className="absolute top-0 flex items-center justify-center border-2 border-gray-500 bg-white text-sm font-semibold text-gray-700" style={{ left: `calc(${leftPosition}px - ${boxWidth / 2}px)`, width: `${boxWidth}px`, height: '1.5rem', }} > {stop.text} </div>
             );
         })}
       </div>
+
+      {isPrintView ? (
+        <div className="flex items-center justify-center text-sm font-semibold text-gray-700">
+          風速
+        </div>
+      ) : (
+        <div></div>
+      )}
+
       <div className="relative">
-        {timeLabels.map((label, i) => (
-          <div key={`time-label-${i}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
+        {timeLabels.map(({ hour, label }) => (
+          <div key={`time-label-left-${hour}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
         ))}
       </div>
-      <div ref={graphAreaRef} className="relative h-full w-full">
+      
+      <div ref={graphAreaRef} className="relative h-full w-full overflow-hidden">
         <div className="absolute inset-0">
-          {timeLabels.map((_, i) => ( <div key={`h-line-${i}`} className="absolute w-full border-t border-gray-200" style={{ top: `${(i * 2 / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
-          {bitLabels.map((_, i) => ( <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * dynamicBitWidth }} /> ))}
+          {isPrintView && windData.map((data, index) => {
+            const colorClass = getWindColorClass(data.speed);
+            if (!colorClass) return null;
+            const topPercent = (data.start / TOTAL_CHART_HOURS) * 100;
+            const heightPercent = ((data.end - data.start) / TOTAL_CHART_HOURS) * 100;
+            return (
+              <div key={`wind-bg-${index}`} className={`absolute w-full ${colorClass}`} style={{ top: `${topPercent}%`, height: `${heightPercent}%` }} />
+            );
+          })}
+          {hourLines.map((hour) => ( 
+            <div 
+              key={`h-line-${hour}`} 
+              className={`absolute w-full border-t ${hour % 3 === 0 ? 'border-gray-400' : 'border-gray-200'}`} 
+              style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
+            /> 
+          ))}
+          {bitLabels.map((_, i) => ( 
+            <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * dynamicBitWidth }} /> 
+          ))}
         </div>
         {graphAreaWidth > 0 && schedules.map((schedule) => {
           const { startHour, endHour } = calculateBarRange(schedule, baseDate);
           if (endHour <= startHour) return null;
-
           const topPercent = (startHour / TOTAL_CHART_HOURS) * 100;
           const heightPercent = ((endHour - startHour) / TOTAL_CHART_HOURS) * 100;
-          
           const bow_m = Number(schedule.bow_position_m);
           const stern_m = Number(schedule.stern_position_m);
-          
-          const chartStart_m = bitNotationToMeters(`${CHART_START_BIT}`)!; // 33bitのメートル位置
-          const chartEnd_m = bitNotationToMeters(`${CHART_END_BIT + 1}`)!; // 65bitのメートル位置
-
-          // 船の右端がグラフの開始位置より左にある場合は、描画をスキップ
-          if (Math.max(bow_m, stern_m) < chartStart_m) {
-            return null;
-          }
-          
-          // 船の左端を描画範囲内に補正
+          const chartStart_m = bitNotationToMeters(`${CHART_START_BIT}`)!;
+          const chartEnd_m = bitNotationToMeters(`${CHART_END_BIT}`)!; // 64ビットの終端まで
+          if (Math.max(bow_m, stern_m) < chartStart_m) { return null; }
           let left_m = Math.min(bow_m, stern_m);
-          if (left_m < chartStart_m) {
-            left_m = chartStart_m;
-          }
-          // 船の右端も描画範囲内に補正
+          if (left_m < chartStart_m) { left_m = chartStart_m; }
           let right_m = Math.max(bow_m, stern_m);
-          if (right_m > chartEnd_m) {
-            right_m = chartEnd_m;
-          }
-
+          if (right_m > chartEnd_m) { right_m = chartEnd_m; }
           const width_m = right_m - left_m;
-          if (width_m <= 0) return null; // 幅がなければ描画しない
-          
+          if (width_m <= 0) return null;
           const left_bit = metersToBitPosition(left_m);
           const right_bit = metersToBitPosition(right_m);
-          
           const left = (left_bit - CHART_START_BIT) * dynamicBitWidth;
           const width = (right_bit - left_bit) * dynamicBitWidth;
-
           const changedFields = (schedule.changed_fields as string[] | null) || [];
           let blockClassName = 'bg-sky-100 text-sky-800';
           if (latestImportId) {
@@ -164,7 +188,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             <div 
               key={`${schedule.id}-${schedule.schedule_date}`} 
               className={`absolute flex items-center justify-center rounded-md border p-1 shadow-sm transition-colors ${interactivityClasses} ${blockClassName}`}
-              style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px` }}
+              style={{ top: `${topPercent}%`, height: `${heightPercent}%`, left: `${left}px`, width: `${width}px`, zIndex: 10 }}
               onClick={() => !isPrintView && onScheduleClick(schedule)}
             >
               <div className="flex w-full items-center justify-between gap-1 text-xs font-bold md:text-sm break-words px-1">
@@ -176,6 +200,35 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
           );
         })}
       </div>
+      
+      {isPrintView && (
+        <div className="relative h-full w-full">
+          {timeLabels.map(({ hour }) => (
+            <div
+              key={`extended-hline-${hour}`}
+              className="absolute w-full border-t border-gray-400"
+              style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }}
+            />
+          ))}
+
+          {report && windData.map((data) => {
+            const speed = data.speed;
+            if (speed == null) return null;
+            const midPointHour = data.start + 1.5;
+            const topPercent = (midPointHour / TOTAL_CHART_HOURS) * 100;
+
+            return (
+              <div 
+                key={`wind-label-right-${data.start}`} 
+                className="absolute z-10 w-full -translate-y-1/2 text-center text-xs font-semibold text-blue-600" 
+                style={{ top: `${topPercent}%` }}
+              >
+                <span className="bg-white px-1">{speed}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

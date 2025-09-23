@@ -25,10 +25,12 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
     };
   }, []);
 
-  // 変更点: A4横 (297mm) を基準に幅を再計算 (左右マージン各1cm=20mm)
-  const GANTT_PRINT_WIDTH = (297 - 20) * 3.78 - 32;
+  // A4横幅(297mm) - 左右マージン(20mm) = 277mm
+  // 277mm * 3.78px/mm = 印刷領域のピクセル幅
+  // そこから、左ラベル(2rem=32px)と右ラベル(3.5rem=56px)の合計88pxを引く
+  const GANTT_PRINT_WIDTH = (297 - 20) * 3.78 - 88;
 
-    // 印刷用の表データを定義
+  // 印刷用の表データを定義
   const limitData = [
     { crane: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
     { crane: 'IC-2', right: '40ft:36+1\n20ft:36+4', left: '?' },
@@ -42,27 +44,28 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
     <div className="print-preview-background">
       <div className="print-outer-container">
         <div className="print-content-wrapper font-sans">
-          
+
           {/* 1. ヘッダー (gridの1行目) */}
           <header className="print-header">
-            <DashboardHeader 
+            <DashboardHeader
               date={date}
               report={report}
               isPrintView={true}
             />
           </header>
-          
+
           {/* 2. 船舶図 (gridの2行目) */}
           <div className="print-gantt-card">
             {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
             <div style={{ height: '100%', position: 'relative' }}>
-              <GanttChart 
-                schedules={schedules} 
-                baseDate={date} 
+              <GanttChart
+                schedules={schedules}
+                baseDate={date}
                 latestImportId={null}
-                onScheduleClick={() => {}}
+                onScheduleClick={() => { }}
                 isPrintView={true}
                 printWidth={GANTT_PRINT_WIDTH}
+                report={report} // この行を追加
               />
             </div>
           </div>
@@ -99,15 +102,15 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
           <div className="print-table-card">
             {/* <h2 className="text-xl font-semibold">荷役予定詳細</h2> */}
             <div className="print-table">
-              <ScheduleTable 
-                schedules={schedules} 
+              <ScheduleTable
+                schedules={schedules}
                 latestImportId={null}
-                onScheduleClick={() => {}}
+                onScheduleClick={() => { }}
                 isPrintView={true}
               />
             </div>
           </div>
-          
+
           {/* 5. メモ (gridの5行目) */}
           <div className="print-memo-card">
             <MemoEdit
