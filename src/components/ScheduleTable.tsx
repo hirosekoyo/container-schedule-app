@@ -1,12 +1,12 @@
 "use client";
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
-import React, { useState, useTransition } from 'react';
+import React, { useTransition } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from './ui/button';
 import { Trash2, PlusCircle, Check } from 'lucide-react';
 import { deleteSchedule, acknowledgeScheduleChange } from '@/lib/supabase/actions';
-import { metersToBitNotation } from '@/lib/coordinateConverter'; // 1. 新しいコンバーターをインポート
+import { metersToBitNotation } from '@/lib/coordinateConverter';
 
 interface ScheduleTableProps {
   schedules: ScheduleWithOperations[];
@@ -14,8 +14,6 @@ interface ScheduleTableProps {
   onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
   isPrintView?: boolean;
 }
-
-// --- 2. ローカルの metersToBitNotation 関数を削除 ---
 
 /**
  * 着岸・離岸時間用の2段表示コンポーネント
@@ -25,15 +23,11 @@ const DateTimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
   eventTimeStr,
 }) => {
   if (!scheduleDateStr || !eventTimeStr) return <span>-</span>;
-
   const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
   const scheduleDateObj = new Date(scheduleDateStr);
-
   const eventDay = eventDateObj.getDate();
   const scheduleDay = scheduleDateObj.getDate();
-
   const timeString = eventDateObj.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-  
   if (eventDay !== scheduleDay) {
     const dateString = `${String(eventDateObj.getDate()).padStart(2, '0')}日`;
     return (
@@ -55,15 +49,11 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
   eventTimeStr,
 }) => {
   if (!scheduleDateStr || !eventTimeStr) return <span>-</span>;
-
   const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
   const scheduleDateObj = new Date(scheduleDateStr);
-
   const eventDay = eventDateObj.getDate();
   const scheduleDay = scheduleDateObj.getDate();
-
   const timeString = eventDateObj.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-  
   if (eventDay !== scheduleDay) {
     const dateString = `${String(eventDateObj.getDate()).padStart(2, '0')}日`;
     return (
@@ -73,9 +63,9 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
       </span>
     );
   }
-  
   return <span>{timeString}</span>;
 };
+
 
 const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick, isPrintView = false }) => {
   const [isPending, startTransition] = useTransition();
@@ -103,26 +93,45 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
   return (
     <div className={`w-full h-full overflow-hidden rounded-lg border ${isPrintView ? 'print-table' : ''}`}>
       <Table>
+        {/* ▼▼▼ 変更箇所: ヘッダーを2段構成に変更 ▼▼▼ */}
         <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
-              <TableHead style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
-              <TableHead style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
-              <TableHead style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
-              <TableHead style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
-              <TableHead style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
-              <TableHead style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
-              <TableHead style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
-              <TableHead style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
-              <TableHead style={{ width: isPrintView ? '4%' : '' }}>プラ ンナ</TableHead>
-              <TableHead style={{ width: isPrintView ? '30%' : '' }}>備考</TableHead>
-              {/* {!isPrintView && <TableHead className="w-[80px]">操作</TableHead>} */}
-              {!isPrintView && <TableHead className="w-[80px]"></TableHead>}
-            </TableRow>
+          <TableRow>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
+            
+            <TableHead colSpan={2} className="text-center">PILOT TAG</TableHead>
+            {isPrintView && (
+              <TableHead colSpan={3} className="text-center">強風連絡</TableHead>
+            )}
+            
+            <TableHead rowSpan={2} style={{ width: isPrintView ? '18%' : '' }}>備考</TableHead>
+            {!isPrintView && <TableHead rowSpan={2} className="w-[80px]"></TableHead>}
+          </TableRow>
+          <TableRow>
+            <TableHead className="text-center" style={{ width: isPrintView ? '2%' : '' }}>P</TableHead>
+            <TableHead className="text-center" style={{ width: isPrintView ? '2%' : '' }}>T</TableHead>
+            {isPrintView && (
+              <>
+                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>10m</TableHead>
+                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>16m</TableHead>
+                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>20m</TableHead>
+              </>
+            )}
+          </TableRow>
         </TableHeader>
+        {/* ▲▲▲ 変更箇所: ヘッダーを2段構成に変更 ▲▲▲ */}
+
         <TableBody>
           {schedules.map((schedule) => {
               const operations = schedule.cargo_operations || [];
@@ -134,10 +143,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 if (schedule.last_import_id !== latestImportId) {
                   rowClassName = 'bg-red-100/60';
                 }
-                // update_flgでの行全体のハイライトは、より詳細なセルハイライトに置き換えるので削除
-                // else if (schedule.update_flg) {
-                //   rowClassName = 'bg-yellow-100/60';
-                // }
               }
               const changedFields = (schedule.changed_fields as string[] | null) || [];
               const getCellClass = (fieldName: string) => {
@@ -173,6 +178,19 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
+                  
+                  {/* ▼▼▼ 変更箇所: 新しいセルを追加 ▼▼▼ */}
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  {isPrintView && (
+                    <>
+                      <TableCell></TableCell>
+                      <TableCell></TableCell>
+                      <TableCell></TableCell>
+                    </>
+                  )}
+                  {/* ▲▲▲ 変更箇所: 新しいセルを追加 ▲▲▲ */}
+
                   <TableCell className="whitespace-pre-wrap align-middle break-words">{schedule.remarks || ''}</TableCell>
                   
                   {!isPrintView && (
@@ -208,7 +226,9 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               className="cursor-pointer hover:bg-green-50"
               onClick={() => onScheduleClick(null)}
             >
-              <TableCell colSpan={isPrintView ? 14 : 15} className="text-center text-green-600 font-semibold">
+              {/* ▼▼▼ 変更箇所: colSpanの値を調整 ▼▼▼ */}
+              <TableCell colSpan={isPrintView ? 19 : 17} className="text-center text-green-600 font-semibold">
+              {/* ▲▲▲ 変更箇所: colSpanの値を調整 ▲▲▲ */}
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>新規追加</span>
