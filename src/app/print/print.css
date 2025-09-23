@@ -1,5 +1,6 @@
 @page {
-  size: A4 portrait;
+  /* 変更点: portrait から landscape に変更 */
+  size: A4 landscape;
   margin: 1cm;
 }
 
@@ -20,8 +21,9 @@
   align-items: center;
 }
 .print-outer-container {
-  width: 210mm;
-  height: 297mm;
+  /* 変更点: width と height を入れ替え */
+  width: 297mm;
+  height: 210mm;
   padding: 1cm;
   background: white;
   border: 1px solid #ccc;
@@ -32,13 +34,14 @@
   height: 100%;
   overflow: hidden;
   display: grid;
-  /* 5つの行の高さを定義。最後のメモだけが残りのスペースを埋めるようにする */
-  grid-template-rows: auto 11cm auto auto 1fr;
+  /* 変更点: A4横向きに合わせて行の高さを調整 (ガントチャートの高さを11cm -> 8cmに) */
+  grid-template-rows: auto 8cm auto auto 1fr;
   gap: 0.5rem;
 }
 
 .print-gantt-card {
-  height: 11cm;
+  /* 変更点: grid-template-rows で高さを制御するため、固定のheightは削除しても良い */
+  /* height: 11cm; */
   border: 1px solid #e5e7eb;
   padding: 0.5rem;
   border-radius: 0.5rem;
@@ -78,12 +81,6 @@
   border-right: none;
 }
 
-/* 船名と備考列だけ左寄せに上書き */
-/* .print-table th:nth-child(2), .print-table td:nth-child(2),
-.print-table th:nth-child(14), .print-table td:nth-child(14) {
-  text-align: left;
-  padding-left: 4px;
-} */
 /* 船名と備考列だけ左寄せに上書き */
 .print-table td:nth-child(2),
 .print-table td:nth-child(14) {

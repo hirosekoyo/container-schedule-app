@@ -25,7 +25,8 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
     };
   }, []);
 
-  const GANTT_PRINT_WIDTH = (210 - 20) * 3.78 - 32;
+  // 変更点: A4横 (297mm) を基準に幅を再計算 (左右マージン各1cm=20mm)
+  const GANTT_PRINT_WIDTH = (297 - 20) * 3.78 - 32;
 
     // 印刷用の表データを定義
   const limitData = [
@@ -54,7 +55,7 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
           {/* 2. 船舶図 (gridの2行目) */}
           <div className="print-gantt-card">
             {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
-            <div style={{ height: 'calc(100% - 24px)', position: 'relative' }}>
+            <div style={{ height: '100%', position: 'relative' }}>
               <GanttChart 
                 schedules={schedules} 
                 baseDate={date} 
