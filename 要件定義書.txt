@@ -102,7 +102,7 @@ CREATE TABLE public.daily_reports (
   wind_speed_3 NUMERIC, wind_speed_4 NUMERIC,
   wind_speed_5 NUMERIC, wind_speed_6 NUMERIC,
   wind_speed_7 NUMERIC, wind_speed_8 NUMERIC,
-  memo TEXT,
+  maintenance_unit TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 6. Supabase DB関数 (構成SQL)

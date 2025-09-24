@@ -86,10 +86,10 @@ export function DashboardClient({
         />
       </div>
 
-      <MemoEdit 
+      {/* <MemoEdit 
         initialMemo={initialReport?.memo || null}
         reportDate={date}
-      />
+      /> */}
       
       {/* 印刷時ではない場合のみ、編集モーダルをレンダリング */}
       {!isPrintView && (

@@ -8,6 +8,9 @@
 印刷時に倍率を100％にする。入りきらない場合だけ倍率を下げる。
 印刷プレビューを閉じるときは、タブを直接閉じるのではなく、キャンセルボタンを押す。（テキストボックスが入力できなくなる）
 
+型定義更新
+npx supabase gen types typescript --linked > src/types/database.types.ts
+
  
 作業メモ
 

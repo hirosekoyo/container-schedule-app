@@ -232,15 +232,15 @@ export async function resetScheduleData() {
 /**
  * 指定された日付の日次レポートのメモだけを更新（UPSERT）する
  * @param report_date - 対象の日付 'YYYY-MM-DD'
- * @param memo - 更新後のメモの内容
+ * @param maintenance_unit - 　
  */
-export async function updateDailyReportMemo(report_date: string, memo: string) {
+export async function updateDailyReportMemo(report_date: string, maintenance_unit: string) {
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase
     .from('daily_reports')
     .upsert(
-      { report_date: report_date, memo: memo },
+      { report_date: report_date, maintenance_unit: maintenance_unit },
       { onConflict: 'report_date' } // report_dateが競合したらUPDATE
     );
 

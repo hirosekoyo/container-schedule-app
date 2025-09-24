@@ -42,22 +42,23 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
             </div>
           )}
         </div>
-        {/* <div className="w-1/2 flex-shrink-0">
+        
+        {/* ▼▼▼ 変更点: 印刷時にも点検予定テーブルを表示 ▼▼▼ */}
+        <div className="w-1/2 flex-shrink-0">
           <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center h-5 px-1 py-0 border-r" style={{ width: '12%' }}>時間</TableHead>
-                {windSpeeds.map(ws => <TableHead key={ws.label} className="text-center h-5 px-1 py-0 border-r" style={{ width: '11%' }}>{ws.label}</TableHead>)}
-              </TableRow>
-            </TableHeader>
             <TableBody>
               <TableRow>
-                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '12%' }}>風速</TableHead>
-                {windSpeeds.map(ws => <TableCell key={ws.label} className="text-center h-5 px-1 py-0 font-semibold border-r" style={{ width: '11%' }}>{ws.value ?? '-'}</TableCell>)}
+                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '20%' }}>
+                  点検予定
+                </TableHead>
+                <TableCell className="px-2 h-5 py-0 font-semibold">
+                  {report?.maintenance_unit || '-'}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
-        </div> */}
+        </div>
+        {/* ▲▲▲ ここまで追加 ▲▲▲ */}
       </div>
     );
   }
@@ -83,7 +84,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
               </div>
             )}
           </div>
-          <div className="w-1/2">
+          <div className="w-1/2 flex flex-col gap-2">
+            {/* 既存の風速テーブル */}
             <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
               <TableHeader>
                 <TableRow>
@@ -103,6 +105,20 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
                       {ws.value ?? '-'}
                     </TableCell>
                   ))}
+                </TableRow>
+              </TableBody>
+            </Table>
+            
+            {/* 既存の点検予定テーブル */}
+            <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
+              <TableBody>
+                <TableRow>
+                  <TableHead className="text-center font-semibold border-r" style={{ width: '12%' }}>
+                    点検予定
+                  </TableHead>
+                  <TableCell className="px-4 text-lg font-semibold">
+                    {report?.maintenance_unit || '-'}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
