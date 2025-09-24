@@ -120,13 +120,13 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
           </div>
 
           {/* 5. メモ (gridの5行目) */}
-          <div className="print-memo-card">
+          {/* <div className="print-memo-card">
             <MemoEdit
               initialMemo={report?.memo || null}
               reportDate={date}
               isPrintView={true}
             />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

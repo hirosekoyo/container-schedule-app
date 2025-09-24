@@ -35,7 +35,7 @@
   overflow: hidden;
   display: grid;
   /* 変更点: A4横向きに合わせて行の高さを調整 (ガントチャートの高さを11cm -> 8cmに) */
-  grid-template-rows: auto 8cm auto auto 1fr;
+  grid-template-rows: auto 8cm auto auto;
   gap: 0.5rem;
 }
 
@@ -62,12 +62,13 @@
   table-layout: fixed;
 }
 .print-table th, .print-table td {
-  padding: 2px 4px;
-  font-size: 7.5pt;
+  padding: 0px 0px;
+  font-size: 6pt;
   vertical-align: top;
+  height: 1rem; /* h-4 に相当 */
+  line-height: 1.1; /* 2段ヘッダーの文字が詰まりすぎないように調整 */
   border: 1px solid #ccc;
 }
-
 .print-table th, .print-table td {
   padding: 4px 2px;
   vertical-align: middle;

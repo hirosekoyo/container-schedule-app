@@ -71,6 +71,7 @@ export function DashboardClient({
             latestImportId={initialLatestImportId}
             onScheduleClick={handleScheduleClick}
             isPrintView={isPrintView}
+            report={initialReport}
           />
         </div>
       </div>
