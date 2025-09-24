@@ -42,7 +42,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
             </div>
           )}
         </div>
-        <div className="w-1/2 flex-shrink-0">
+        {/* <div className="w-1/2 flex-shrink-0">
           <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
             <TableHeader>
               <TableRow>
@@ -57,7 +57,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
               </TableRow>
             </TableBody>
           </Table>
-        </div>
+        </div> */}
       </div>
     );
   }

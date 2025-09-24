@@ -7,6 +7,7 @@ import { MemoEdit } from '@/components/MemoEdit';
 import { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import CraneLimitChart from '@/components/CraneLimitChart';
 
 interface PrintPageClientProps {
   date: string;
@@ -70,8 +71,15 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
             </div>
           </div>
 
+          {/* ここで高さを指定する必要はなくなります */}
+          <CraneLimitChart 
+            isPrintView={true}
+            printWidth={GANTT_PRINT_WIDTH} 
+            report={report}
+          />
+
           {/* 3. 極限位置 (gridの3行目) */}
-          <div className="table-container">
+          {/* <div className="table-container">
             <Table className="border text-[7pt]">
               <TableHeader>
                 <TableRow>
@@ -96,7 +104,7 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
                 </TableRow>
               </TableBody>
             </Table>
-          </div>
+          </div> */}
 
           {/* 4. 荷役予定詳細 (gridの4行目) */}
           <div className="print-table-card">
