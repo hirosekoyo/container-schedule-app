@@ -39,3 +39,12 @@ export const PLANNER_TO_STEVEDORE_MAP: { [key: string]: string } = {
   'ベンライン': 'KAM',
   '三菱倉庫福岡支店': 'MIT',
 };
+
+/**
+ * バスバーと集電装置の点検区分の変換マップ
+ */
+export const tenkenkubun: { [key: string]: string[] } = {
+  '1': ['C1', 'T01-T09'],
+  '2': ['C2', 'T10-T18'],
+  '3': ['D ', 'T19-T26'],
+};

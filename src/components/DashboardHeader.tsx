@@ -4,6 +4,8 @@ import { EditDailyReportDialog } from './EditDailyReportDialog';
 import { DailyReport } from '@/lib/supabase/actions';
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+// ▼▼▼ 変更点1: tenkenkubunの定義をインポート ▼▼▼
+import { tenkenkubun } from '@/lib/constants';
 
 interface DashboardHeaderProps {
   date: string;
@@ -25,6 +27,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
     { label: '18〜', value: report?.wind_speed_7 }, { label: '21〜', value: report?.wind_speed_8 },
   ];
 
+  // ▼▼▼ 変更点2: 表示用の終了点検データを準備するロジック ▼▼▼
+  const tenkenData = report?.tenkenkubun ? tenkenkubun[report.tenkenkubun.toString()] : null;
+  const tenkenDisplayValue = tenkenData ? `区画: ${tenkenData[0]} / RTG: ${tenkenData[1]}` : '-';
+
   if (isPrintView) {
     // --- 印刷表示のレイアウト ---
     return (
@@ -43,8 +49,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
           )}
         </div>
         
-        {/* ▼▼▼ 変更点: 印刷時にも点検予定テーブルを表示 ▼▼▼ */}
-        <div className="w-1/2 flex-shrink-0">
+        {/* ▼▼▼ 変更点3: 印刷時のテーブルを縦に並べるコンテナを追加 ▼▼▼ */}
+        <div className="w-1/2 flex-shrink-0 flex flex-col gap-1">
+          {/* 点検予定テーブル */}
           <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
             <TableBody>
               <TableRow>
@@ -57,8 +64,21 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
               </TableRow>
             </TableBody>
           </Table>
+
+          {/* 終了点検テーブル */}
+          <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
+            <TableBody>
+              <TableRow>
+                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '20%' }}>
+                  終了点検
+                </TableHead>
+                <TableCell className="px-2 h-5 py-0 font-semibold">
+                  {tenkenDisplayValue}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
-        {/* ▲▲▲ ここまで追加 ▲▲▲ */}
       </div>
     );
   }
@@ -85,7 +105,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
             )}
           </div>
           <div className="w-1/2 flex flex-col gap-2">
-            {/* 既存の風速テーブル */}
+            {/* 風速テーブル */}
             <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
               <TableHeader>
                 <TableRow>
@@ -109,7 +129,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
               </TableBody>
             </Table>
             
-            {/* 既存の点検予定テーブル */}
+            {/* 点検予定テーブル */}
             <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
               <TableBody>
                 <TableRow>
@@ -122,6 +142,21 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
                 </TableRow>
               </TableBody>
             </Table>
+
+            {/* ▼▼▼ 変更点4: 通常表示にも終了点検テーブルを追加 ▼▼▼ */}
+            <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>
+              <TableBody>
+                <TableRow>
+                  <TableHead className="text-center font-semibold border-r" style={{ width: '12%' }}>
+                    終了点検
+                  </TableHead>
+                  <TableCell className="px-4 text-lg font-semibold">
+                    {tenkenDisplayValue}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+
           </div>
         </div>
       </div>
