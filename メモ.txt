@@ -41,6 +41,14 @@ https://www.pwabuilder.com/imageGenerator
 
 いい感じです。33ビットより左にはみ出している船も正しく描画されるようになりました。
 
+次はミーティング時間とかわし早出時間、会社を設定する部品をお願いします。
+ic_dailテーブルのmeeting_time、kawasi_time、companyがそれぞれ対応します。
+風速情報と点検予定の間に配置します。3つで一つの横ならびのブロックにしてください。
+ミーティング時間とかわし早出時間は時間入力に最適な入力方法で
+会社は以下のComboboxとSTEVEDORE_OPTIONS.mapを利用したいので参考にしてください。
+<div className="col-span-2"><Label>GC運転</Label><Combobox options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.stevedore_company || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)} placeholder="会社を選択..." /></div>
+
+
 
 
 実装したい

@@ -27,9 +27,18 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
     { label: '18〜', value: report?.wind_speed_7 }, { label: '21〜', value: report?.wind_speed_8 },
   ];
 
-  // ▼▼▼ 変更点2: 表示用の終了点検データを準備するロジック ▼▼▼
   const tenkenData = report?.tenkenkubun ? tenkenkubun[report.tenkenkubun.toString()] : null;
   const tenkenDisplayValue = tenkenData ? `区画: ${tenkenData[0]} / RTG: ${tenkenData[1]}` : '-';
+
+  // ▼▼▼ 変更点1: 表示用データの整形ロジックを修正 ▼▼▼
+  // meeting_time から秒を削除 (例: "08:00:00" -> "08:00")
+  const meetingDisplayValue = report?.meeting_time ? report.meeting_time.slice(0, 5) : '-';
+
+  // kawasi_time から秒を削除し、companyがあれば追加。なければ「なし」と表示
+  const kawasiDisplayValue = report?.kawasi_time 
+    ? `${report.kawasi_time.slice(0, 5)}${report.company ? ` (${report.company})` : ''}` 
+    : 'なし';
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   if (isPrintView) {
     // --- 印刷表示のレイアウト ---
@@ -49,7 +58,22 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
           )}
         </div>
         
-        {/* ▼▼▼ 変更点3: 印刷時のテーブルを縦に並べるコンテナを追加 ▼▼▼ */}
+        <div className="flex-shrink-0">
+          <Table className="border text-[8pt]">
+            <TableBody>
+              <TableRow>
+                <TableHead className="text-center h-5 px-2 py-0 border-r font-semibold">ミーティング</TableHead>
+                {/* ▼▼▼ 変更点2: 新しい表示用変数を使用 ▼▼▼ */}
+                <TableCell className="px-2 h-5 py-0 font-semibold">{meetingDisplayValue}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableHead className="text-center h-5 px-2 py-0 border-r font-semibold">早出かわし</TableHead>
+                <TableCell className="px-2 h-5 py-0 font-semibold">{kawasiDisplayValue}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        
         <div className="w-1/2 flex-shrink-0 flex flex-col gap-1">
           {/* 点検予定テーブル */}
           <Table className="border text-[8pt]" style={{ tableLayout: 'fixed' }}>
@@ -104,6 +128,23 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
               </div>
             )}
           </div>
+
+          <div className="flex-shrink-0">
+            <Table className="border rounded-md text-sm">
+              <TableBody>
+                <TableRow>
+                  <TableHead className="px-3 font-semibold border-r">ミーティング</TableHead>
+                  {/* ▼▼▼ 変更点3: 新しい表示用変数を使用 ▼▼▼ */}
+                  <TableCell className="px-3 text-xl font-bold">{meetingDisplayValue}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableHead className="px-3 font-semibold border-r">早出かわし</TableHead>
+                  <TableCell className="px-3 text-lg font-bold">{kawasiDisplayValue}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
           <div className="w-1/2 flex flex-col gap-2">
             {/* 風速テーブル */}
             <Table className="border rounded-md" style={{ tableLayout: 'fixed' }}>

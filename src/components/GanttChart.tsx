@@ -76,7 +76,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
     { id: 3, text: '3', position: 40.0 }, { id: 4, text: '4', position: 44.5 },
     { id: 5, text: '5', position: 48.5 }, { id: 6, text: '6', position: 51.5 },
     { id: 7, text: '7', position: 52.5 }, { id: 8, text: '8', position: 55.5 },
-    { id: 9, text: '9', position: 60.5 }, { id: 10, text: '10', position: 63.5 },
+    { id: 9, text: '9', position: 60.2 }, { id: 10, text: '10', position: 63.2 },
   ];
 
   const getWindColorClass = (speed: number | null | undefined): string => {

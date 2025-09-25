@@ -48,3 +48,13 @@ export const tenkenkubun: { [key: string]: string[] } = {
   '2': ['C2', 'T10-T18'],
   '3': ['D ', 'T19-T26'],
 };
+
+// 3:00から9:00までの30分刻みの時刻オプションを生成
+export const TIME_OPTIONS_30_MINUTES = Array.from({ length: 12 }, (_, i) => {
+  // 開始時間(5:00)の総分数 + インデックス * 30分
+  const totalMinutes = (3 * 60) + (i * 30);
+  const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+  const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+  const time = `${hours}:${minutes}`;
+  return { value: time, label: time };
+});
