@@ -110,7 +110,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
             <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
             <TableHead rowSpan={2} style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
             
-            <TableHead colSpan={2} className="text-center">PILOT TAG</TableHead>
+            <TableHead colSpan={2} className="text-center">PILOT TUG</TableHead>
             {isPrintView && (
               <TableHead colSpan={3} className="text-center">強風連絡</TableHead>
             )}
@@ -130,7 +130,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
             )}
           </TableRow>
         </TableHeader>
-        {/* ▲▲▲ 変更箇所: ヘッダーを2段構成に変更 ▲▲▲ */}
 
         <TableBody>
           {schedules.map((schedule) => {
@@ -179,9 +178,11 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
                   
-                  {/* ▼▼▼ 変更箇所: 新しいセルを追加 ▼▼▼ */}
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
+                  {/* ▼▼▼ ここからが変更箇所です ▼▼▼ */}
+                  <TableCell className={getCellClass('pilot') + ' text-center'}>{schedule.pilot ? '有' : '無'}</TableCell>
+                  <TableCell className={getCellClass('tug') + ' text-center'}>{schedule.tug ? '有' : '無'}</TableCell>
+                  {/* ▲▲▲ ここまで変更 ▲▲▲ */}
+
                   {isPrintView && (
                     <>
                       <TableCell></TableCell>
@@ -189,7 +190,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                       <TableCell></TableCell>
                     </>
                   )}
-                  {/* ▲▲▲ 変更箇所: 新しいセルを追加 ▲▲▲ */}
 
                   <TableCell className="whitespace-pre-wrap align-middle break-words">{schedule.remarks || ''}</TableCell>
                   
@@ -226,9 +226,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               className="cursor-pointer hover:bg-green-50"
               onClick={() => onScheduleClick(null)}
             >
-              {/* ▼▼▼ 変更箇所: colSpanの値を調整 ▼▼▼ */}
               <TableCell colSpan={isPrintView ? 19 : 17} className="text-center text-green-600 font-semibold">
-              {/* ▲▲▲ 変更箇所: colSpanの値を調整 ▲▲▲ */}
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>新規追加</span>

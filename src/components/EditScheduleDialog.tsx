@@ -11,12 +11,13 @@ import { useRouter } from 'next/navigation';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { DateTimePicker } from './ui/DateTimePicker';
-import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants'; 
+import { CRANE_OPTIONS, STEVEDORE_OPTIONS } from '@/lib/constants';
 import { Combobox } from './ui/Combobox';
-// --- 【ここからが修正箇所】 ---
-// 共通化されたコンバーターをインポート
 import { metersToBitNotation, bitNotationToMeters } from '@/lib/coordinateConverter';
-// --- 【ここまで】 ---
+// ▼▼▼ 変更点1: 必要なコンポーネントと型をインポート ▼▼▼
+import { Checkbox } from "@/components/ui/checkbox";
+import type { CheckedState } from "@radix-ui/react-checkbox";
+
 
 interface EditScheduleDialogProps {
   schedule: ScheduleWithOperations | null;
@@ -26,17 +27,13 @@ interface EditScheduleDialogProps {
   latestImportId: string | null;
 }
 
-// --- 【ここからが修正箇所】 ---
-// ローカルのヘルパー関数は不要になったので削除
-// const bitNotationToMeters = ...
-// --- 【ここまで】 ---
-
 const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string => {
   if (!dbTimestamp) return '';
   return dbTimestamp.replace(' ', 'T').substring(0, 16);
 };
 
-type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number' | 'remarks'> & {
+// ▼▼▼ 変更点2: FormDataの型にpilotとtugを追加 ▼▼▼
+type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number' | 'remarks' | 'pilot' | 'tug'> & {
   arrival_time_local: string;
   departure_time_local: string;
   bow_position_notation: string;
@@ -59,6 +56,9 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           planner_company: schedule.planner_company,
           berth_number: schedule.berth_number,
           remarks: schedule.remarks,
+          // ▼▼▼ 変更点3: pilotとtugの初期値を設定 ▼▼▼
+          pilot: schedule.pilot ?? false,
+          tug: schedule.tug ?? false,
           arrival_time_local: toDatetimeLocalString(schedule.arrival_time),
           departure_time_local: toDatetimeLocalString(schedule.departure_time),
           bow_position_notation: metersToBitNotation(Number(schedule.bow_position_m)),
@@ -73,6 +73,8 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           planner_company: '',
           berth_number: 6,
           remarks: '',
+          pilot: false,
+          tug: false,
           arrival_time_local: initialTime,
           departure_time_local: initialTime,
           bow_position_notation: '',
@@ -88,6 +90,12 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     const isNumberField = name === 'berth_number';
     setScheduleData(prev => prev ? { ...prev, [name]: isNumberField ? parseInt(value, 10) : value } : null);
   };
+
+  // ▼▼▼ 変更点4: Checkbox用のonChangeハンドラを追加 ▼▼▼
+  const handleScheduleCheckboxChange = (name: 'pilot' | 'tug', checked: CheckedState) => {
+    setScheduleData(prev => prev ? { ...prev, [name]: !!checked } : null);
+  };
+
   const handleScheduleDateTimeChange = (name: 'arrival_time_local' | 'departure_time_local', value: string) => {
     setScheduleData(prev => prev ? { ...prev, [name]: value } : null);
   };
@@ -106,7 +114,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       ...prev, 
       { 
         start_time_local: scheduleData?.arrival_time_local,
-        stevedore_company: scheduleData?.planner_company // プランナの値を初期値としてセット
+        stevedore_company: scheduleData?.planner_company
       }
     ]);
   };
@@ -114,8 +122,8 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     setOperationsData(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     if (!scheduleData) return;
 
     const bow_m_float = bitNotationToMeters(scheduleData.bow_position_notation);
@@ -136,8 +144,8 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       arrival_time: formatForDB(scheduleData.arrival_time_local),
       departure_time: formatForDB(scheduleData.departure_time_local),
       arrival_side: scheduleData.arrival_side,
-      bow_position_m: bow_m, // 切り捨てた値を使用
-      stern_position_m: stern_m, // 切り捨てた値を使用
+      bow_position_m: bow_m,
+      stern_position_m: stern_m,
     };
 
     const newDataHash = [
@@ -149,10 +157,13 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       dataForHash.stern_position_m,
     ].join('|');
     
+    // ▼▼▼ 変更点5: 保存データにpilotとtugを追加 ▼▼▼
     const dataToSave = {
       ship_name: scheduleData.ship_name,
       planner_company: scheduleData.planner_company,
       remarks: scheduleData.remarks,
+      pilot: scheduleData.pilot,
+      tug: scheduleData.tug,
       ...dataForHash,
       data_hash: newDataHash,
       last_import_id: latestImportId,
@@ -164,7 +175,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
     }));
-    // --- 【ここまで】 ---
 
     if (schedule) {
       startTransition(async () => {
@@ -173,7 +183,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
         if (!error) {onOpenChange(false); router.refresh(); }
         else { alert(`更新中にエラーが発生しました: ${error.message}`); }
       });
-    } else { // --- 新規作成モード ---
+    } else {
       const createDataToSave = {
         ...dataToSave,
         schedule_date: scheduleDateForNew,
@@ -191,24 +201,33 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      {/* ▼▼▼ 変更点6: DialogContentのスタイルを変更 ▼▼▼ */}
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{schedule ? `予定編集: ${schedule.ship_name}` : '新規予定作成'}</DialogTitle>
           <DialogDescription>
             {schedule ? `${schedule.schedule_date}の予定を編集します。` : `${scheduleDateForNew}の予定を新規作成します。`}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto pr-6">
-          
-          {/* --- 【ここからが修正箇所】 --- */}
 
-          {/* === 船舶情報 === */}
+        {/* ▼▼▼ 変更点7: formとfooterの構造を変更 ▼▼▼ */}
+        <form id="edit-schedule-form" onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-6 flex-grow">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">船舶情報</h3>
-            {/* 1行目: 船名(8割) 岸壁(2割) */}
-            <div className="grid grid-cols-10 gap-4">
+            {/* 1行目: 船名(6割) -> Pilot/Tug(2割) -> 岸壁(2割) */}
+            <div className="grid grid-cols-10 gap-4 items-end">
               <div className="col-span-8"><Label>船名</Label><Input name="ship_name" value={scheduleData?.ship_name || ''} onChange={handleScheduleChange} /></div>
-              <div className="col-span-2"><Label>岸壁</Label><Input name="berth_number" type="number" value={scheduleData?.berth_number || ''} onChange={handleScheduleChange} /></div>
+              <div className="col-span-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Checkbox id="pilot" checked={scheduleData?.pilot} onCheckedChange={(checked) => handleScheduleCheckboxChange('pilot', checked)} />
+                  <Label htmlFor="pilot" className="font-medium">PILOT</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="tug" checked={scheduleData?.tug} onCheckedChange={(checked) => handleScheduleCheckboxChange('tug', checked)} />
+                  <Label htmlFor="tug" className="font-medium">TUG</Label>
+                </div>
+              </div>
+              <div className="col-span-1"><Label>岸壁</Label><Input name="berth_number" type="number" value={scheduleData?.berth_number || ''} onChange={handleScheduleChange} /></div>
             </div>
             {/* 2行目: 着岸時間(5割) 離岸時間(5割) */}
             <div className="grid grid-cols-2 gap-4">
@@ -237,7 +256,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
             </div>
           </div>
 
-          {/* === 荷役作業 === */}
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h3 className="text-lg font-semibold">荷役作業</h3>
@@ -246,7 +264,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
             <div className="space-y-4">
               {operationsData.map((op, index) => (
                 <div key={index} className="space-y-2 rounded-md border p-4">
-                  {/* 1行目 */}
                   <div className="grid grid-cols-10 gap-4 items-end">
                     <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
                     <div className="col-span-2"><Label>使用GC</Label><Combobox options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.crane_names || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)} placeholder="GCを選択..." /></div>
@@ -258,13 +275,13 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
               ))}
             </div>
           </div>
-
-          {/* --- 【ここまで修正】 --- */}
-          
-          <DialogFooter>
-            <Button type="submit" disabled={isPending}>{isPending ? "保存中..." : "更新"}</Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter className="pt-4 flex-shrink-0">
+          <Button type="submit" form="edit-schedule-form" disabled={isPending}>
+            {isPending ? "更新中..." : "更新"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
