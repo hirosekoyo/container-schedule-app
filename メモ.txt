@@ -41,15 +41,6 @@ https://www.pwabuilder.com/imageGenerator
 
 いい感じです。33ビットより左にはみ出している船も正しく描画されるようになりました。
 
-次はミーティング時間とかわし早出時間、会社を設定する部品をお願いします。
-ic_dailテーブルのmeeting_time、kawasi_time、companyがそれぞれ対応します。
-風速情報と点検予定の間に配置します。3つで一つの横ならびのブロックにしてください。
-ミーティング時間とかわし早出時間は時間入力に最適な入力方法で
-会社は以下のComboboxとSTEVEDORE_OPTIONS.mapを利用したいので参考にしてください。
-<div className="col-span-2"><Label>GC運転</Label><Combobox options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.stevedore_company || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)} placeholder="会社を選択..." /></div>
-
-
-
 
 実装したい
 
@@ -62,17 +53,10 @@ ic_dailテーブルのmeeting_time、kawasi_time、companyがそれぞれ対応�
 済み　点検区分を追加する。
 済み　かわし、ミーティング追加。
 済み　アンカー位置最新化
-pilot,tugの項目追加
+済み　pilot,tugの項目追加
 
-
-schedulesテーブルにpilot、tugのカラムを追加してください。
-どちらもboolean型で、デフォルトはfalseです。
-予定編集モーダルにpilot、tugのチェックボックスを追加してください。チェックを入れるとtrue、外すとfalseになります。
-追加する場所は、船名と同じ行で、PILOT、TUGというラベルにしてください。
-表示領域の割合は船名６割、PILOT２割，TUG２割、岸壁２割にして、この順番に並べてください。
-また、日次レポートモーダルと同様に保存ボタンをフォームの外に出して、スクロールしても押しやすいようにしてください。
-以下の現在のバージョンをもとに修正してください。
-
+Gを自動ではなく手動で設定できるようにする。
+schedulesテーブルにcrane_count（数値型、最大でも一桁です。）を追加してください。
 
 
 極限情報を最新晩にする。
