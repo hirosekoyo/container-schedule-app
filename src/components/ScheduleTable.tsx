@@ -96,36 +96,36 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
         {/* ▼▼▼ 変更箇所: ヘッダーを2段構成に変更 ▼▼▼ */}
         <TableHeader className="bg-gray-50">
           <TableRow>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
             
-            <TableHead colSpan={2} className="text-center">PILOT TUG</TableHead>
+            <TableHead colSpan={2} className="text-center h-4 py-0 px-1">PILOT TUG</TableHead>
             {isPrintView && (
-              <TableHead colSpan={3} className="text-center">強風連絡</TableHead>
+              <TableHead colSpan={3} className="text-center h-4 py-0 px-1">強風連絡</TableHead>
             )}
             
-            <TableHead rowSpan={2} style={{ width: isPrintView ? '18%' : '' }}>備考</TableHead>
-            {!isPrintView && <TableHead rowSpan={2} className="w-[80px]"></TableHead>}
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '18%' : '' }}>備考</TableHead>
+            {!isPrintView && <TableHead rowSpan={2} className="w-[80px] h-4 py-0 px-1"></TableHead>}
           </TableRow>
           <TableRow>
-            <TableHead className="text-center" style={{ width: isPrintView ? '2%' : '' }}>P</TableHead>
-            <TableHead className="text-center" style={{ width: isPrintView ? '2%' : '' }}>T</TableHead>
+            <TableHead className="text-center h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>P</TableHead>
+            <TableHead className="text-center h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>T</TableHead>
             {isPrintView && (
               <>
-                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>10m</TableHead>
-                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>16m</TableHead>
-                <TableHead className="text-center" style={{ width: isPrintView ? '3%' : '' }}>20m</TableHead>
+                <TableHead className="text-center h-4 py-0 px-1" style={{ width: isPrintView ? '3%' : '' }}>10m</TableHead>
+                <TableHead className="text-center h-4 py-0 px-1" style={{ width: isPrintView ? '3%' : '' }}>16m</TableHead>
+                <TableHead className="text-center h-4 py-0 px-1" style={{ width: isPrintView ? '3%' : '' }}>20m</TableHead>
               </>
             )}
           </TableRow>
@@ -172,17 +172,19 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                       )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="align-middle">{operations.length > 0 ? operations.length : '-'}</TableCell>
+                  {/* ▼▼▼ ここからが変更箇所です ▼▼▼ */}
+                  <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
+                    {(schedule.crane_count ?? 0) > 0 ? schedule.crane_count : '-'}
+                  </TableCell>
+                  {/* ▲▲▲ ここまで変更 ▲▲▲ */}
                   <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
                   <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
                   
-                  {/* ▼▼▼ ここからが変更箇所です ▼▼▼ */}
-                  <TableCell className={getCellClass('pilot') + ' text-center'}>{schedule.pilot ? '有' : '無'}</TableCell>
-                  <TableCell className={getCellClass('tug') + ' text-center'}>{schedule.tug ? '有' : '無'}</TableCell>
-                  {/* ▲▲▲ ここまで変更 ▲▲▲ */}
-
+                  <TableCell className={`text-center ${getCellClass('pilot')}`}>{schedule.pilot ? '◯' : '-'}</TableCell>
+                  <TableCell className={`text-center ${getCellClass('tug')}`}>{schedule.tug ? '◯' : '-'}</TableCell>
+                  
                   {isPrintView && (
                     <>
                       <TableCell></TableCell>
