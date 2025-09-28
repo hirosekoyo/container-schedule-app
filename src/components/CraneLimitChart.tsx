@@ -15,7 +15,7 @@ const CHART_END_BIT = 64;
 
 const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, printWidth, report }) => {
 
-    const yAxisLabels = ['CB'];
+    const yAxisLabels = [''];
     const numberOfRows = yAxisLabels.length;
 
     const bitLabels = Array.from({ length: CHART_END_BIT - CHART_START_BIT + 1 }, (_, i) => CHART_START_BIT + i);
@@ -44,18 +44,18 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
         { name: 'BUSBAR', start: 35.4, end: 43.0, row: 0 },
         { name: 'BUSBAR', start: 44.4, end: 56.0, row: 0 },
         { name: 'BUSBAR', start: 57.0, end: 63.2, row: 0 },
-        { name: 'CB', start: 34.6, end: 35.0, row: 0 },
-        { name: 'CB', start: 44.6, end: 45.0, row: 0 },
-        { name: 'CB', start: 56.9, end: 57.3, row: 0 },
+        { name: 'CB', start: 34.5, end: 35.0, row: 0 },
+        { name: 'CB', start: 44.5, end: 45.0, row: 0 },
+        { name: 'CB', start: 56.8, end: 57.3, row: 0 },
     ];
 
     const limitData = [
-        { crane: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
-        { crane: 'IC-2', right: '40ft:36+1\n20ft:36+4', left: '?' },
-        { crane: 'IC-3', right: 'IC-2横', left: '右脚56±00' },
-        { crane: 'IC-4', right: '左脚38±00', left: '右脚61±00' },
-        { crane: 'IC-5', right: '左脚45±00', left: '40ft:63-9\n20ft:63-6' },
-        { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-7\n20ft:64-10' },
+        { crane: 'IC-1', right: '40ft:35+01\n20ft:35+04', left: '右脚54+00' },
+        { crane: 'IC-2', right: '40ft:36+01\n20ft:36+04', left: '右脚55+00' },
+        { crane: 'IC-3', right: 'IC-2横', left: '右脚56+00' },
+        { crane: 'IC-4', right: '左脚38+00', left: '右脚61+00' },
+        { crane: 'IC-5', right: '左脚45+00', left: '40ft:63-09\n20ft:63-06' },
+        { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-07\n20ft:64-10' },
     ];
 
     const windSpeeds = [
@@ -100,7 +100,7 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
                             const left = (obstacle.start - CHART_START_BIT) * dynamicBitWidth;
                             const width = (obstacle.end - obstacle.start) * dynamicBitWidth;
                             const top = (obstacle.row / numberOfRows) * 100;
-                            let styleClass = 'absolute flex items-center justify-center text-[8px] font-bold';
+                            let styleClass = 'absolute flex items-center justify-center text-[6px] font-bold';
                             let heightPercent = (1 / numberOfRows) * 100;
 
                             if (obstacle.name === 'BUSBAR') {
@@ -134,39 +134,7 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
 
             {/* --- テーブル部分 --- */}
             <div className="flex gap-2 items-start">
-                <div className="w-[40%] flex flex-col h-full">
-                    <Table className="border text-[10pt] h-full" style={{ tableLayout: 'fixed' }}>
-                        {/* ▼▼▼ 変更点2: 新しい「情報」行をTableHeaderに追加 ▼▼▼ */}
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '12%' }}>
-                                    注意
-                                </TableHead>
-                                <TableHead colSpan={8} className="text-center h-5 px-1 py-0 font-semibold border-r">
-                                    {windAlertMessage}
-                                </TableHead>
-                            </TableRow>
-                            <TableRow>
-                                <TableHead className="text-center h-5 px-1 py-0 border-r" style={{ width: '12%' }}>時間</TableHead>
-                                {windSpeeds.map(ws => <TableHead key={ws.label} className="text-center h-5 px-1 py-0 border-r" style={{ width: '11%' }}>{ws.label}</TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow className="h-full">
-                                <TableHead className="text-center h-5 px-1 py-0 border-r font-semibold" style={{ width: '12%' }}>風速</TableHead>
-                                {windSpeeds.map(ws => (
-                                    <TableCell
-                                        key={ws.label}
-                                        className={`text-center h-5 px-1 py-0 font-semibold border-r ${getWindColorClass(ws.value)}`}
-                                        style={{ width: '11%' }}
-                                    >
-                                        {ws.value ?? '-'}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
+
 
                 <div className="flex-1 flex flex-col">
                     <Table className="border text-[7pt] h-full">

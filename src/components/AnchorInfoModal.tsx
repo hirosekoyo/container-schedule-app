@@ -11,17 +11,17 @@ interface AnchorInfoModalProps {
 const anchorData = [
   { no: 1, pos: 35.5 }, { no: 2, pos: 39.0 }, { no: 3, pos: 40.0 },
   { no: 4, pos: 44.5 }, { no: 5, pos: 48.5 }, { no: 6, pos: 51.5 },
-  { no: 7, pos: 52.5 }, { no: 8, pos: 55.5 }, { no: 9, pos: 60.5 },
-  { no: 10, pos: 63.5 },
+  { no: 7, pos: 52.5 }, { no: 8, pos: 55.5 }, { no: 9, pos: 60.2 },
+  { no: 10, pos: 63.2 },
 ];
 
 const limitData = [
-  { crane: 'IC-1', right: '40ft:35+1\n20ft:35+4', left: '?' },
-  { crane: 'IC-2', right: '40ft:36+1\n20ft:36+4', left: '?' },
-  { crane: 'IC-3', right: 'IC-2横', left: '右脚56±00' },
-  { crane: 'IC-4', right: '左脚38±00', left: '右脚61±00' },
-  { crane: 'IC-5', right: '左脚45±00', left: '40ft:63-9\n20ft:63-6' },
-  { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-7\n20ft:64-10' },
+  { crane: 'IC-1', right: '40ft:35+01\n20ft:35+04', left: '右脚54+00' },
+  { crane: 'IC-2', right: '40ft:36+01\n20ft:36+04', left: '右脚55+00' },
+  { crane: 'IC-3', right: 'IC-2横', left: '右脚56+00' },
+  { crane: 'IC-4', right: '左脚38+00', left: '右脚61+00' },
+  { crane: 'IC-5', right: '左脚45+00', left: '40ft:63-09\n20ft:63-06' },
+  { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-07\n20ft:64-10' },
 ];
 
 

@@ -84,7 +84,7 @@
 
 /* 船名と備考列だけ左寄せに上書き */
 .print-table td:nth-child(2),
-.print-table td:nth-child(14) {
+.print-table td:nth-child(19) {
   text-align: left;
   padding-left: 4px;
 }

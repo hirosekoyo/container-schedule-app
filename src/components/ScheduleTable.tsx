@@ -96,8 +96,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
         {/* ▼▼▼ 変更箇所: ヘッダーを2段構成に変更 ▼▼▼ */}
         <TableHeader className="bg-gray-50">
           <TableRow>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1 " style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1 text-center" style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
@@ -115,7 +115,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               <TableHead colSpan={3} className="text-center h-4 py-0 px-1">強風連絡</TableHead>
             )}
             
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '18%' : '' }}>備考</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1 text-center" style={{ width: isPrintView ? '18%' : '' }}>備考</TableHead>
             {!isPrintView && <TableHead rowSpan={2} className="w-[80px] h-4 py-0 px-1"></TableHead>}
           </TableRow>
           <TableRow>
