@@ -96,7 +96,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
       ) : (
         // --- 通常表示用のレイアウト ---
         <div 
-          className={`grid gap-2 font-sans items-start grid-cols-[auto_1fr] rounded-lg border bg-white p-2 shadow-sm`}
+          className={`grid gap-2 font-sans items-start grid-cols-[auto_1fr] rounded-lg border bg-white p-2 shadow-sm cursor-pointer`}
           onClick={() => setIsModalOpen(true)}
         >
           <div className={`flex flex-col justify-around py-1 pr-2`}>

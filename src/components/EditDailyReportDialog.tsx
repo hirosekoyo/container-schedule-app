@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { CRANE_OPTIONS, tenkenkubun, STEVEDORE_OPTIONS, TIME_OPTIONS_30_MINUTES } from '@/lib/constants';
 import { Combobox } from './ui/Combobox';
 import { TimePicker } from './ui/TimePicker';
-// ▼▼▼ 変更点1: X アイコンをインポート ▼▼▼
 import { X } from 'lucide-react';
 
 interface EditDailyReportDialogProps {
@@ -20,6 +19,7 @@ interface EditDailyReportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 type DailyReportFormData = Omit<DailyReport, 'id' | 'created_at'>;
+
 
 export function EditDailyReportDialog({ report, report_date, open, onOpenChange }: EditDailyReportDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -117,10 +117,17 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
   const addFreeInputToUnits = () => { if(freeInput.trim()==='')return; const c = formData.maintenance_unit?.split(', ').filter(Boolean)??[]; if(!c.includes(freeInput.trim())){const n=[...c, freeInput.trim()];handleMaintenanceUnitChange(n);} setFreeInput('') };
   const removeUnit = (unitToRemove: string) => { const c = formData.maintenance_unit?.split(', ').filter(Boolean)??[]; const n = c.filter(u=>u!==unitToRemove); handleMaintenanceUnitChange(n) };
   const handleChangeTenkenkubun = () => { setFormData(prev => { const current = prev.tenkenkubun ?? 3; const next = (current % 3) + 1; return { ...prev, tenkenkubun: next }; }); };
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); startTransition(async () => { const { error } = await upsertDailyReport(formData); if (!error) { onOpenChange(false); router.refresh(); } else { alert(`エラーが発生しました: ${error.message}`); } }); };
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { /*...*/ };
   const selectedUnits = formData.maintenance_unit?.split(', ').filter(Boolean) ?? [];
   const prevTenkenData = previousTenken ? tenkenkubun[previousTenken.tenkenkubun.toString()] : null;
   const currentTenkenData = formData.tenkenkubun ? tenkenkubun[formData.tenkenkubun.toString()] : null;
+
+  // ▼▼▼ 変更点: ボタン表示用のテキストを生成するロジックを追加 ▼▼▼
+  const currentTenkenKey = formData.tenkenkubun?.toString() ?? '3';
+  const nextTenkenKey = ((formData.tenkenkubun ?? 3) % 3 + 1).toString();
+  
+  const currentKukaku = tenkenkubun[currentTenkenKey] ? tenkenkubun[currentTenkenKey][0] : '-';
+  const nextKukaku = tenkenkubun[nextTenkenKey] ? tenkenkubun[nextTenkenKey][0] : '-';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,8 +207,9 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
                 </div>
               </div>
               <div className="pt-2">
+                {/* ▼▼▼ 変更点: ボタン内のテキスト表示を修正 ▼▼▼ */}
                 <Button type="button" variant="outline" onClick={handleChangeTenkenkubun}>
-                  点検区分を変更 ( {formData.tenkenkubun} → {(formData.tenkenkubun ?? 3) % 3 + 1} )
+                  点検区分を変更 ( {currentKukaku} → {nextKukaku} )
                 </Button>
               </div>
             </div>
