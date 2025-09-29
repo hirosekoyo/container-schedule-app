@@ -13,6 +13,8 @@
 型定義更新
 npx supabase gen types typescript --linked > src/types/database.types.ts
 
+npm install
+
  
 作業メモ
 
@@ -59,25 +61,6 @@ https://www.pwabuilder.com/imageGenerator
 済み　ギャング数追加
 済み　プランなを代理店ではなく荷役会社からインポートする。
 済み　極限情報を最新晩にする。
-
-ヘッダーのレイアウトを修正します。
-通常時も印刷時も同じレイアウトにします。
-横長１列の４ブロック構成にします。
-１ブロック目はタイトルで「IC」と太文字で表示します。
-２ブロック目は、１行目日付、２行目当直（primary_staff、secondary_staff、S + support_staff）
-3ブロック目は、風速テーブルで以下の条件でセルを塗りつぶす。
-    const getWindColorClass = (speed: number | null | undefined): string => {
-        if (speed == null) return '';
-        if (speed >= 20) return 'bg-red-200/50';
-        if (speed >= 16) return 'bg-orange-200/50';
-        if (speed >= 10) return 'bg-yellow-200/50';
-        return '';
-    };
-４ブロック目は、ミーティング、早出かわし、点検予定、終了点検を一つの表にします。
-左側２列にミーティング、早出かわし、を配置して、右側２列を点検予定、終了点検にします。点検予定は長くなる可能性があるので空きスペース全てを使います。
-
-
-チェッキングブリッジをガントチャートに組み込む
 
 
 スマホピンチいん、ピンチアウと

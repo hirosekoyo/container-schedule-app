@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DailyReport } from '@/lib/supabase/actions';
+// ▼▼▼ 変更点1: tenkenkubunをインポート ▼▼▼
+import { tenkenkubun } from '@/lib/constants';
 
 interface CraneLimitChartProps {
     isPrintView?: boolean;
@@ -10,44 +12,15 @@ interface CraneLimitChartProps {
     report: DailyReport | null;
 }
 
-const CHART_START_BIT = 33;
-const CHART_END_BIT = 64;
-
 const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, printWidth, report }) => {
 
-    const yAxisLabels = [''];
-    const numberOfRows = yAxisLabels.length;
-
-    const bitLabels = Array.from({ length: CHART_END_BIT - CHART_START_BIT + 1 }, (_, i) => CHART_START_BIT + i);
-
-    const graphAreaRef = useRef<HTMLDivElement>(null);
-    const [graphAreaWidth, setGraphAreaWidth] = useState(0);
-
-    useEffect(() => {
-        if (isPrintView && printWidth && printWidth > 0) {
-            setGraphAreaWidth(printWidth);
-            return;
-        }
-        const graphElement = graphAreaRef.current;
-        if (!graphElement) return;
-        const resizeObserver = new ResizeObserver(entries => {
-            if (entries[0]) setGraphAreaWidth(entries[0].contentRect.width);
-        });
-        resizeObserver.observe(graphElement);
-        return () => resizeObserver.unobserve(graphElement);
-    }, [isPrintView, printWidth]);
-
-    const numberOfBitIntervals = CHART_END_BIT - CHART_START_BIT;
-    const dynamicBitWidth = graphAreaWidth > 0 ? graphAreaWidth / numberOfBitIntervals : 0;
-
-    const obstacles = [
-        { name: 'BUSBAR', start: 35.4, end: 43.0, row: 0 },
-        { name: 'BUSBAR', start: 44.4, end: 56.0, row: 0 },
-        { name: 'BUSBAR', start: 57.0, end: 63.2, row: 0 },
-        { name: 'CB', start: 34.5, end: 35.0, row: 0 },
-        { name: 'CB', start: 44.5, end: 45.0, row: 0 },
-        { name: 'CB', start: 56.8, end: 57.3, row: 0 },
-    ];
+    // ▼▼▼ 変更点2: Headerから表示用データの準備ロジックを移植 ▼▼▼
+    const tenkenData = report?.tenkenkubun ? tenkenkubun[report.tenkenkubun.toString()] : null;
+    const tenkenDisplayValue = tenkenData ? `区画: ${tenkenData[0]} / RTG: ${tenkenData[1]}` : '-';
+    const meetingDisplayValue = report?.meeting_time ? report.meeting_time.slice(0, 5) : '-';
+    const kawasiDisplayValue = report?.kawasi_time 
+        ? `${report.kawasi_time.slice(0, 5)}${report.company ? ` (${report.company})` : ''}` 
+        : 'なし';
 
     const limitData = [
         { crane: 'IC-1', right: '40ft:35+01\n20ft:35+04', left: '右脚54+00' },
@@ -58,103 +31,58 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
         { crane: 'IC-6', right: '左脚47-15', left: '40ft:64-07\n20ft:64-10' },
     ];
 
-    const windSpeeds = [
-        { label: '0〜', value: report?.wind_speed_1 }, { label: '3〜', value: report?.wind_speed_2 },
-        { label: '6〜', value: report?.wind_speed_3 }, { label: '9〜', value: report?.wind_speed_4 },
-        { label: '12〜', value: report?.wind_speed_5 }, { label: '15〜', value: report?.wind_speed_6 },
-        { label: '18〜', value: report?.wind_speed_7 }, { label: '21〜', value: report?.wind_speed_8 },
-    ];
-
-    const getWindColorClass = (speed: number | null | undefined): string => {
-        if (speed == null) return '';
-        if (speed >= 20) return 'bg-red-200/50';
-        if (speed >= 16) return 'bg-orange-200/50';
-        if (speed >= 10) return 'bg-yellow-200/50';
-        return '';
-    };
-
-    // ▼▼▼ 変更点1: 強風があるかどうかを判定し、メッセージを決定するロジック ▼▼▼
-    const hasStrongWind = windSpeeds.some(ws => ws.value != null && ws.value >= 10);
-    const windAlertMessage = hasStrongWind ? "＊強風時間帯有り注意＊" : "＊強風予報無し＊";
-
     return (
-        <div className="border border-gray-200 rounded-lg pt-2 px-2 flex flex-col gap-2 pb-1">
-            {/* --- チャート部分 --- */}
-            <div style={{ height: '0.7cm' }}>
-                <div className="grid h-full w-full font-sans" style={{ gridTemplateColumns: '2rem 1fr 3.5rem', gridTemplateRows: '1rem 1fr' }}>
-                    <div></div>
-                    <div className="relative">
-                        {bitLabels.map((l, i) => (<div key={l} className="absolute bottom-0 -translate-x-1/2 text-[10px] font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>{l}</div>))}
-                    </div>
-                    <div></div>
-                    <div className="relative border-r border-gray-300">
-                        {yAxisLabels.map((l, i) => (<div key={l} className="absolute flex h-full w-full items-center justify-center text-[10px] font-semibold text-gray-700" style={{ top: `${(i / numberOfRows) * 100}%`, height: `${(1 / numberOfRows) * 100}%` }}>{l}</div>))}
-                    </div>
-                    <div ref={graphAreaRef} className="relative h-full w-full overflow-hidden">
-                        <div className="absolute inset-0">
-                            {yAxisLabels.map((_, i) => (<div key={`h-${i}`} className="absolute w-full border-t border-gray-300" style={{ top: `${(i / numberOfRows) * 100}%` }} />))}
-                            <div className="absolute bottom-0 w-full border-t border-gray-300" />
-                            {bitLabels.map((_, i) => (<div key={`v-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * dynamicBitWidth }} />))}
-                        </div>
-                        {graphAreaWidth > 0 && (obstacles.map((obstacle, i) => {
-                            const left = (obstacle.start - CHART_START_BIT) * dynamicBitWidth;
-                            const width = (obstacle.end - obstacle.start) * dynamicBitWidth;
-                            const top = (obstacle.row / numberOfRows) * 100;
-                            let styleClass = 'absolute flex items-center justify-center text-[6px] font-bold';
-                            let heightPercent = (1 / numberOfRows) * 100;
-
-                            if (obstacle.name === 'BUSBAR') {
-                                styleClass += ' bg-gray-500 text-white';
-                                heightPercent *= 0.65;
-                            } else if (obstacle.name === 'CB') {
-                                styleClass += ' bg-white text-black border border-black';
-                            } else {
-                                styleClass += ' bg-red-400 border border-red-700 text-white';
-                            }
-
-                            return (
-                                <div 
-                                    key={`o-${i}`} 
-                                    className={styleClass} 
-                                    style={{ 
-                                        left: `${left}px`, 
-                                        width: `${width}px`, 
-                                        top: `calc(${top}% + ${(100 - heightPercent) / 2}%)`,
-                                        height: `${heightPercent}%` 
-                                    }}
-                                >
-                                    {obstacle.name}
-                                </div>
-                            );
-                        }))}
-                    </div>
-                    <div></div>
-                </div>
-            </div>
-
+        // ▼▼▼ 変更点3: ルート要素のスタイルを調整 ▼▼▼
+        <div className="border border-gray-200 rounded-lg p-1">
             {/* --- テーブル部分 --- */}
-            <div className="flex gap-2 items-start">
-
-
-                <div className="flex-1 flex flex-col">
+            <div className="flex gap-2 items-stretch">
+                {/* --- 左側カラム --- */}
+                <div className="w-[40%] flex flex-col gap-4">
+                    {/* 上段: ミーティング/かわし */}
+                    <div className="flex-1">
+                        <Table className="border text-[8pt] h-full" style={{tableLayout: 'fixed'}}>
+                            <TableBody>
+                                <TableRow>
+                                    <TableHead className={`text-center font-semibold border-r p-1 bg-gray-50 w-1/4`}>ミーティング</TableHead>
+                                    <TableCell className={`font-semibold border-r px-2 py-1 w-1/4`}>{meetingDisplayValue}</TableCell>
+                                    <TableHead className={`text-center font-semibold border-r p-1 bg-gray-50 w-1/4`}>早出かわし</TableHead>
+                                    <TableCell className={`font-semibold px-2 py-1 w-1/4`}>{kawasiDisplayValue}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {/* 下段: 終了点検 */}
+                    <div className="flex-1">
+                        <Table className="border text-[8pt] h-full">
+                            <TableBody>
+                                <TableRow>
+                                    <TableHead className={`text-center font-semibold border-r w-[25%] p-1 bg-gray-50`}>終了点検</TableHead>
+                                    <TableCell className={`px-2 font-semibold`}>{tenkenDisplayValue}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                {/* --- 右側カラム --- */}
+                <div className="flex-1">
                     <Table className="border text-[7pt] h-full">
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[15%] px-1 py-0 h-4 text-center"></TableHead>
+                                <TableHead className="w-[15%] px-1 py-0 h-4 text-center bg-gray-50"></TableHead>
                                 {limitData.map(col => (
-                                    <TableHead key={col.crane} className="text-center px-1 py-0 h-4">{col.crane}</TableHead>
+                                    <TableHead key={col.crane} className="text-center px-1 py-0 h-4 bg-gray-50">{col.crane}</TableHead>
                                 ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             <TableRow>
-                                <TableCell className="font-semibold text-center px-1 py-0 h-4">左極限</TableCell>
+                                <TableCell className="font-semibold text-center px-1 py-0 h-4 bg-gray-50">左極限</TableCell>
                                 {limitData.map(col => (
                                     <TableCell key={`${col.crane}-right`} className="text-center px-1 py-0 h-4 whitespace-pre-wrap">{col.right}</TableCell>
                                 ))}
                             </TableRow>
                             <TableRow>
-                                <TableCell className="font-semibold text-center px-1 py-0 h-4">右極限</TableCell>
+                                <TableCell className="font-semibold text-center px-1 py-0 h-4 bg-gray-50">右極限</TableCell>
                                 {limitData.map(col => (
                                     <TableCell key={`${col.crane}-left`} className="text-center px-1 py-0 h-4 whitespace-pre-wrap">{col.left}</TableCell>
                                 ))}
