@@ -32,7 +32,7 @@ const DateTimeDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
     const dateString = `${String(eventDateObj.getDate()).padStart(2, '0')}日`;
     return (
       <span className="leading-tight">
-        <span className="text-xs text-muted-foreground">{dateString}</span>
+        <span className=" text-muted-foreground">{dateString}</span>
         <br />
         {timeString}
       </span>
@@ -58,7 +58,7 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
     const dateString = `${String(eventDateObj.getDate()).padStart(2, '0')}日`;
     return (
       <span>
-        <span className="text-xs text-muted-foreground">{dateString}</span>
+        <span className=" text-muted-foreground">{dateString}</span>
         <span> {timeString}</span>
       </span>
     );
