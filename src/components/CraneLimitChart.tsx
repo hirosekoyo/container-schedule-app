@@ -32,8 +32,7 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
     ];
 
     return (
-        // ▼▼▼ 変更点3: ルート要素のスタイルを調整 ▼▼▼
-        <div className="border border-gray-200 rounded-lg p-1">
+        <div>
             {/* --- テーブル部分 --- */}
             <div className="flex gap-2 items-stretch">
                 {/* --- 左側カラム --- */}

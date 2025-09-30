@@ -1,5 +1,4 @@
 @page {
-  /* 変更点: portrait から landscape に変更 */
   size: A4 landscape;
   margin: 1cm;
 }
@@ -15,13 +14,11 @@
 
 .print-preview-background {
   background-color: #ffffff;
-  /* padding: 0.5rem; */
   display: flex;
   justify-content: center;
   align-items: center;
 }
 .print-outer-container {
-  /* 変更点: width と height を入れ替え */
   width: 297mm;
   height: 210mm;
   padding: 1cm;
@@ -34,14 +31,14 @@
   height: 100%;
   overflow: hidden;
   display: grid;
-  /* 変更点: A4横向きに合わせて行の高さを調整 (ガントチャートの高さを11cm -> 8cmに) */
-  grid-template-rows: auto 8cm auto auto;
-  gap: 0.5rem;
+  /* ▼▼▼ 変更点1: grid-template-rows と gap を修正 ▼▼▼ */
+  /* DashboardHeader, GanttChart, CraneLimitChart, ScheduleTable の高さを定義 */
+  grid-template-rows: auto 8cm auto 1fr; 
+  gap: 0.5rem; /* 各コンポーネントの隙間 */
 }
 
+
 .print-gantt-card {
-  /* 変更点: grid-template-rows で高さを制御するため、固定のheightは削除しても良い */
-  /* height: 11cm; */
   border: 1px solid #e5e7eb;
   padding: 0.5rem;
   border-radius: 0.5rem;
@@ -88,3 +85,55 @@
   text-align: left;
   padding-left: 4px;
 }
+
+/* ▼▼▼ 半分目安 ▼▼▼ */
+
+/* 用紙の中央を示す目安線（トンボ） */
+.print-outer-container {
+  position: relative; /* 疑似要素を配置するための基準点にする */
+}
+
+/* 縦の中央線 (上下の辺に表示) */
+.print-outer-container::before {
+  content: '';
+  position: absolute;
+  left: 50%; /* 横方向の中央 */
+  transform: translateX(-50%); /* 中央揃えの補正 */
+  width: 1px; /* 線の太さ */
+  background-color: #cccccc; /* 線の色 */
+  
+  /* 上の線 */
+  top: 0;
+  height: 0.2cm; /* 線の長さ */
+
+  /* 下の線 (box-shadowを使って描画) */
+  /* box-shadow: x-offset y-offset blur color */
+  box-shadow: 0 calc(210mm - 1cm) 0 0 #cccccc;
+}
+
+/* 横の中央線 (左右の辺に表示) */
+.print-outer-container::after {
+  content: '';
+  position: absolute;
+  top: 50%; /* 縦方向の中央 */
+  transform: translateY(-50%); /* 中央揃えの補正 */
+  height: 1px; /* 線の太さ */
+  background-color: #cccccc; /* 線の色 */
+  
+  /* 左の線 */
+  left: 0;
+  width: 0.2cm; /* 線の長さ */
+
+  /* 右の線 (box-shadowを使って描画) */
+  box-shadow: calc(297mm - 1cm) 0 0 0 #cccccc;
+}
+
+/* 印刷時には目安線を表示しない 　ここをコメントアウトして目安線表示*/
+@media print {
+  .print-outer-container::before,
+  .print-outer-container::after {
+    display: none;
+  }
+}
+
+/* ▲▲▲ 半分目安ここまで ▲▲▲ */

@@ -3,10 +3,8 @@
 import DashboardHeader from '@/components/DashboardHeader';
 import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
-import { MemoEdit } from '@/components/MemoEdit';
 import { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useEffect } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import CraneLimitChart from '@/components/CraneLimitChart';
 
 interface PrintPageClientProps {
@@ -81,14 +79,6 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
             </div>
           </div>
 
-          {/* 5. メモ (gridの5行目) */}
-          {/* <div className="print-memo-card">
-            <MemoEdit
-              initialMemo={report?.memo || null}
-              reportDate={date}
-              isPrintView={true}
-            />
-          </div> */}
         </div>
       </div>
     </div>
