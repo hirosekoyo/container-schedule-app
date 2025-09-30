@@ -117,7 +117,7 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
   const addFreeInputToUnits = () => { if(freeInput.trim()==='')return; const c = formData.maintenance_unit?.split(', ').filter(Boolean)??[]; if(!c.includes(freeInput.trim())){const n=[...c, freeInput.trim()];handleMaintenanceUnitChange(n);} setFreeInput('') };
   const removeUnit = (unitToRemove: string) => { const c = formData.maintenance_unit?.split(', ').filter(Boolean)??[]; const n = c.filter(u=>u!==unitToRemove); handleMaintenanceUnitChange(n) };
   const handleChangeTenkenkubun = () => { setFormData(prev => { const current = prev.tenkenkubun ?? 3; const next = (current % 3) + 1; return { ...prev, tenkenkubun: next }; }); };
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { /*...*/ };
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); startTransition(async () => { const { error } = await upsertDailyReport(formData); if (!error) { onOpenChange(false); router.refresh(); } else { alert(`エラーが発生しました: ${error.message}`); } }); };
   const selectedUnits = formData.maintenance_unit?.split(', ').filter(Boolean) ?? [];
   const prevTenkenData = previousTenken ? tenkenkubun[previousTenken.tenkenkubun.toString()] : null;
   const currentTenkenData = formData.tenkenkubun ? tenkenkubun[formData.tenkenkubun.toString()] : null;
