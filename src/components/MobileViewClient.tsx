@@ -7,21 +7,21 @@ import { MobileGanttChart } from './MobileGanttChart';
 import { useRouter } from 'next/navigation';
 import { AnchorInfoModal } from './AnchorInfoModal';
 import { Button } from './ui/button';
-import { Anchor } from 'lucide-react'; // ZoomIn, ZoomOutは不要なので削除
+import { Anchor } from 'lucide-react';
 
 interface MobileViewClientProps {
-
+  initialReport: DailyReport | null;
   initialSchedules: ScheduleWithOperations[];
   date: string;
 }
 
 export function MobileViewClient({
+  initialReport,
   initialSchedules,
   date,
 }: MobileViewClientProps) {
   const router = useRouter();
   const [isAnchorModalOpen, setIsAnchorModalOpen] = useState(false);
-  
   
   const mainAreaRef = useRef<HTMLElement>(null);
   const [viewSize, setViewSize] = useState({ width: 0, height: 0 });
@@ -42,6 +42,7 @@ export function MobileViewClient({
     return () => resizeObserver.unobserve(mainElement);
   }, []);
 
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') router.refresh();
@@ -49,7 +50,6 @@ export function MobileViewClient({
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [router]);
-
 
   return (
     <>
@@ -62,7 +62,6 @@ export function MobileViewClient({
 
       <main ref={mainAreaRef} className="flex-1 overflow-hidden">
         {viewSize.width > 0 && (
-          // ▼▼▼ 変更点2: 不要なpropsを削除 ▼▼▼
           <MobileGanttChart 
             schedules={initialSchedules}
             baseDate={date}
