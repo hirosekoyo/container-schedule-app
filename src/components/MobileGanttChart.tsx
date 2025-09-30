@@ -1,7 +1,6 @@
 "use client";
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
-// ▼▼▼ 変更点1: useLayoutEffect をインポート ▼▼▼
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { PopoverContent } from '@/components/ui/popover';
@@ -71,7 +70,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   // const ZOOM_LEVELS = [1, 1.5, 2, 3];
   const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
   const [zoomIndex, setZoomIndex] = useState(0);
-
   const isZoomedIn = zoomIndex > 0;
   
   // ▼▼▼ 変更点2: 既存のハンドラ関数を正しく維持 ▼▼▼
@@ -105,7 +103,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   const leftAxisRef = useRef<HTMLDivElement>(null);
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const lastDistanceRef = useRef<number | null>(null);
-  // ▼▼▼ 変更点2: 前回のズームインデックスを保持するためのrefを追加 ▼▼▼
   const prevZoomIndexRef = useRef(zoomIndex);
 
   useEffect(() => {
@@ -200,6 +197,11 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
 
+  // ▼▼▼ 変更点1: ダブルタップ用のハンドラ関数を追加 ▼▼▼
+  const handleDoubleClick = () => {
+    setZoomIndex(0); // ズームレベルを全画面表示に戻す
+  };
+
   return (
     <div className="relative h-full w-full">
       <div className="grid h-full w-full" style={{ gridTemplateColumns: `${AXIS_LABEL_WIDTH}px 1fr`, gridTemplateRows: `${AXIS_LABEL_HEIGHT}px 1fr` }}>
@@ -221,8 +223,13 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
             ))}
           </div>
         </div>
-        {/* ▼▼▼ 変更点5: onDoubleClickを削除 ▼▼▼ */}
-        <div ref={contentAreaRef} className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none`}>
+
+        {/* ▼▼▼ 変更点2: コンテンツエリアにonDoubleClickを追加 ▼▼▼ */}
+        <div 
+          ref={contentAreaRef} 
+          className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none`}
+          onDoubleClick={handleDoubleClick}
+        >
           <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
             <div className="absolute inset-0">
               {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
@@ -290,7 +297,7 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
           </div>
         </div>
       </div>
-
+{/* 
       <div className="absolute bottom-4 right-4 z-30 flex flex-col gap-2">
         <Button size="icon" onClick={() => setZoomIndex(prev => Math.min(prev + 1, ZOOM_LEVELS.length - 1))}>
           <ZoomIn className="h-5 w-5" />
@@ -301,7 +308,7 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
         <Button size="icon" variant="outline" onClick={() => setZoomIndex(0)}>
           <Maximize className="h-5 w-5" />
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }
