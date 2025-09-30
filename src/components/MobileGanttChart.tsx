@@ -69,7 +69,7 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   
   // ▼▼▼ 変更点1: ズームレベルを任意の値に設定可能 ▼▼▼
   // const ZOOM_LEVELS = [1, 1.5, 2, 3];
-  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 3]
+  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
   const [zoomIndex, setZoomIndex] = useState(0);
 
   const isZoomedIn = zoomIndex > 0;
