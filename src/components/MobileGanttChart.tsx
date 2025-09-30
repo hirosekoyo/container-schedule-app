@@ -227,7 +227,7 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
         {/* ▼▼▼ 変更点2: コンテンツエリアにonDoubleClickを追加 ▼▼▼ */}
         <div 
           ref={contentAreaRef} 
-          className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none`}
+          className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none no-scrollbar`}
           onDoubleClick={handleDoubleClick}
         >
           <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
