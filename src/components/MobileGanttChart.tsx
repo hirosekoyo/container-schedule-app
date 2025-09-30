@@ -1,7 +1,8 @@
 "use client";
 
 import type { ScheduleWithOperations } from '@/lib/supabase/actions';
-import React, { useState, useRef, useEffect } from 'react';
+// ▼▼▼ 変更点1: useLayoutEffect をインポート ▼▼▼
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { bitNotationToMeters, metersToBitPosition, metersToBitNotation } from '@/lib/coordinateConverter';
 import { PopoverContent } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -67,7 +68,8 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
   
   // ▼▼▼ 変更点1: ズームレベルを任意の値に設定可能 ▼▼▼
-  const ZOOM_LEVELS = [1, 1.5, 2, 3];
+  // const ZOOM_LEVELS = [1, 1.5, 2, 3];
+  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 3]
   const [zoomIndex, setZoomIndex] = useState(0);
 
   const isZoomedIn = zoomIndex > 0;
@@ -88,29 +90,23 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   const timeLabels = Array.from({ length: 14 }, (_, i) => i * 2);
   const bitLabels = Array.from({ length: 33 }, (_, i) => 33 + i);
   const CHART_START_BIT = 33;
-  
   const AXIS_LABEL_WIDTH = 32;
   const AXIS_LABEL_HEIGHT = 28;
   
-  // ▼▼▼ 変更点2: サイズ計算のロジックを全面的に修正 ▼▼▼
   const currentZoomLevel = ZOOM_LEVELS[zoomIndex];
-  
-  // 1. まず、ズームレベル1倍（全画面表示）のときの基本サイズを常に計算する
   const fullViewBitWidth = (viewSize.width - AXIS_LABEL_WIDTH) / bitLabels.length;
   const fullViewHourHeight = (viewSize.height - AXIS_LABEL_HEIGHT) / (timeLabels.length * 2 - 2);
-
-  // 2. その基本サイズに、現在のズーム倍率を掛けるだけのシンプルな計算に変更
   const BIT_WIDTH_PX = fullViewBitWidth * currentZoomLevel;
   const HOUR_HEIGHT_PX = fullViewHourHeight * currentZoomLevel;
-  
   const totalChartWidth = bitLabels.length * BIT_WIDTH_PX;
   const totalChartHeight = (timeLabels.length - 1) * 2 * HOUR_HEIGHT_PX;
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   const topAxisRef = useRef<HTMLDivElement>(null);
   const leftAxisRef = useRef<HTMLDivElement>(null);
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const lastDistanceRef = useRef<number | null>(null);
+  // ▼▼▼ 変更点2: 前回のズームインデックスを保持するためのrefを追加 ▼▼▼
+  const prevZoomIndexRef = useRef(zoomIndex);
 
   useEffect(() => {
     const contentArea = contentAreaRef.current;
@@ -123,7 +119,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
     return () => contentArea.removeEventListener('scroll', handleScroll);
   }, [isZoomedIn]);
   
-  // ▼▼▼ 変更点4: ピンチ操作用のuseEffect ▼▼▼
   useEffect(() => {
     const contentArea = contentAreaRef.current;
     if (!contentArea) return;
@@ -165,6 +160,43 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
       contentArea.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [ZOOM_LEVELS]);
+
+  // ▼▼▼ 変更点3: 中央基点ズームを実現するためのuseLayoutEffectを追加 ▼▼▼
+  useLayoutEffect(() => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea) return;
+
+    const oldZoomIndex = prevZoomIndexRef.current;
+    const newZoomIndex = zoomIndex;
+
+    // ズームレベルが変化していない場合は何もしない
+    if (oldZoomIndex === newZoomIndex) return;
+
+    // ズーム比率を計算
+    const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
+    const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
+    const ratio = newZoomLevel / oldZoomLevel;
+
+    // ズーム前の中心点の座標を計算
+    const centerX = contentArea.scrollLeft + contentArea.clientWidth / 2;
+    const centerY = contentArea.scrollTop + contentArea.clientHeight / 2;
+
+    // ズーム後の中心点がどこに移動するかを予測
+    const newCenterX = centerX * ratio;
+    const newCenterY = centerY * ratio;
+
+    // 新しいスクロール位置を計算して、予測した中心点が画面中央に来るように調整
+    const newScrollLeft = newCenterX - contentArea.clientWidth / 2;
+    const newScrollTop = newCenterY - contentArea.clientHeight / 2;
+
+    // スクロール位置を即座に更新
+    contentArea.scrollLeft = newScrollLeft;
+    contentArea.scrollTop = newScrollTop;
+
+    // 今回のズームインデックスを次回の「前回」として保存
+    prevZoomIndexRef.current = newZoomIndex;
+  }, [zoomIndex, ZOOM_LEVELS]);
+
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
 
