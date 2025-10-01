@@ -62,6 +62,7 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
   </div>
 );
 export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: MobileGanttChartProps) {
+  const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
   const [popoverShip, setPopoverShip] = useState<ScheduleWithOperations | null>(null);
   const [selectedShips, setSelectedShips] = useState<ScheduleWithOperations[]>([]);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
@@ -125,6 +126,10 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
         });
       }
     }
+  };
+
+  const togglePopover = (scheduleId: number) => {
+    setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [scheduleId]); // 一度に一つだけ開く
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
