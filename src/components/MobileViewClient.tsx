@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { AnchorInfoModal } from './AnchorInfoModal';
 import { Button } from './ui/button';
 import { Anchor } from 'lucide-react';
+// ▼▼▼ 変更点1: date-fns-tzから必要な関数をインポート ▼▼▼
+import { format, toDate } from 'date-fns-tz';
 
 interface MobileViewClientProps {
   initialReport: DailyReport | null;
@@ -51,12 +53,47 @@ export function MobileViewClient({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [router]);
 
+  // ▼▼▼ 変更点2: 最新の更新時刻を計算・フォーマットするロジックを追加 ▼▼▼
+  const getLatestUpdateTime = () => {
+    if (!initialSchedules || initialSchedules.length === 0) {
+      return null;
+    }
+
+    // すべてのupdated_atをDateオブジェクトに変換して比較し、最新のものを探す
+    const latestUpdate = initialSchedules.reduce((latest, current) => {
+      // updated_atがnullでないものだけを対象にする
+      if (!current.updated_at) return latest;
+      const latestDate = latest ? new Date(latest) : new Date(0);
+      const currentDate = new Date(current.updated_at);
+      return currentDate > latestDate ? current.updated_at : latest;
+    }, null as string | null);
+
+    if (!latestUpdate) {
+      return null;
+    }
+    
+    // UTCのタイムスタンプを日本時間のDateオブジェクトに変換
+    const dateInTokyo = toDate(latestUpdate, { timeZone: 'Asia/Tokyo' });
+    // 指定のフォーマットに変換
+    return format(dateInTokyo, 'MM/dd HH:mm');
+  };
+
+  const latestUpdateTime = getLatestUpdateTime();
+
   return (
-    <>
+    <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex-grow"><DateNavigator currentDate={date} basePath="/mobile" /></div>
-          <Button variant="outline" size="icon" onClick={() => setIsAnchorModalOpen(true)} className="flex-shrink-0"><Anchor className="h-4 w-4" /></Button>
+        {/* ▼▼▼ 変更点3: DateNavigatorをdivで囲み、その上に最終更新時刻を表示 ▼▼▼ */}
+        <div className="mt-4">
+          {latestUpdateTime && (
+            <p className="text-left text-[10px] text-gray-500 mb-1">
+              最終更新: {latestUpdateTime}
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="flex-grow"><DateNavigator currentDate={date} basePath="/mobile" /></div>
+            <Button variant="outline" size="icon" onClick={() => setIsAnchorModalOpen(true)} className="flex-shrink-0"><Anchor className="h-4 w-4" /></Button>
+          </div>
         </div>
       </header>
 
@@ -71,6 +108,6 @@ export function MobileViewClient({
       </main>
       
       <AnchorInfoModal open={isAnchorModalOpen} onOpenChange={setIsAnchorModalOpen} />
-    </>
+    </div>
   );
 }
