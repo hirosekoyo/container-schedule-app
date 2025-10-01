@@ -62,17 +62,13 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
   </div>
 );
 export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: MobileGanttChartProps) {
-  const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
   const [popoverShip, setPopoverShip] = useState<ScheduleWithOperations | null>(null);
   const [selectedShips, setSelectedShips] = useState<ScheduleWithOperations[]>([]);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
-  
-  // ▼▼▼ 変更点1: ズームレベルを任意の値に設定可能 ▼▼▼
-  // const ZOOM_LEVELS = [1, 1.5, 2, 3];
-  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
   const [zoomIndex, setZoomIndex] = useState(0);
+  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3];
   const isZoomedIn = zoomIndex > 0;
-  
+
   const calculateShipDistance = (shipA: ScheduleWithOperations, shipB: ScheduleWithOperations): number => {
     const minA = Math.min(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
     const maxA = Math.max(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
@@ -128,9 +124,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
     }
   };
 
-  const togglePopover = (scheduleId: number) => {
-    setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [scheduleId]); // 一度に一つだけ開く
-  };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!contentAreaRef.current) return;
@@ -160,21 +153,20 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
   const lastDistanceRef = useRef<number | null>(null);
   const prevZoomIndexRef = useRef(zoomIndex);
 
-    useEffect(() => {
-    const contentArea = contentAreaRef.current;
-    if (!contentArea || !isZoomedIn) return;
-    const handleScroll = () => {
-      if (topAxisRef.current) topAxisRef.current.scrollLeft = contentArea.scrollLeft;
-      if (leftAxisRef.current) leftAxisRef.current.scrollTop = contentArea.scrollTop;
-    };
-    contentArea.addEventListener('scroll', handleScroll);
-    return () => contentArea.removeEventListener('scroll', handleScroll);
-  }, [isZoomedIn]);
-  
+  // ▼▼▼ 変更点1: useEffectを1つにまとめ、マウント後に実行されることを保証する ▼▼▼
   useEffect(() => {
     const contentArea = contentAreaRef.current;
     if (!contentArea) return;
 
+    // --- スクロール同期のロジック ---
+    const handleScroll = () => {
+      if (!isZoomedIn) return;
+      if (topAxisRef.current) topAxisRef.current.scrollLeft = contentArea.scrollLeft;
+      if (leftAxisRef.current) leftAxisRef.current.scrollTop = contentArea.scrollTop;
+    };
+    contentArea.addEventListener('scroll', handleScroll);
+
+    // --- ピンチ操作のロジック ---
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -200,20 +192,23 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
       }
     };
     const handleTouchEnd = () => { lastDistanceRef.current = null; };
+
     contentArea.addEventListener('touchstart', handleTouchStart);
     contentArea.addEventListener('touchmove', handleTouchMove, { passive: false });
     contentArea.addEventListener('touchend', handleTouchEnd);
     contentArea.addEventListener('touchcancel', handleTouchEnd);
 
+    // クリーンアップ関数
     return () => {
+      contentArea.removeEventListener('scroll', handleScroll);
       contentArea.removeEventListener('touchstart', handleTouchStart);
       contentArea.removeEventListener('touchmove', handleTouchMove);
       contentArea.removeEventListener('touchend', handleTouchEnd);
       contentArea.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [ZOOM_LEVELS]);
+  // 依存配列に isZoomedIn を追加
+  }, [isZoomedIn, ZOOM_LEVELS]);
 
-  // ▼▼▼ 変更点2: 2つのuseEffectを1つに統合 ▼▼▼
   useLayoutEffect(() => {
     // --- 中央基点ズームのロジック ---
     const contentArea = contentAreaRef.current;
