@@ -153,12 +153,11 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
   const lastDistanceRef = useRef<number | null>(null);
   const prevZoomIndexRef = useRef(zoomIndex);
 
-  // ▼▼▼ 変更点1: useEffectを1つにまとめ、マウント後に実行されることを保証する ▼▼▼
+  // ▼▼▼ 変更点1: useEffectを1つに統合 ▼▼▼
   useEffect(() => {
     const contentArea = contentAreaRef.current;
-    if (!contentArea) return;
+    if (!contentArea) return; // コンポーネントがマウントされてから実行
 
-    // --- スクロール同期のロジック ---
     const handleScroll = () => {
       if (!isZoomedIn) return;
       if (topAxisRef.current) topAxisRef.current.scrollLeft = contentArea.scrollLeft;
@@ -198,7 +197,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
     contentArea.addEventListener('touchend', handleTouchEnd);
     contentArea.addEventListener('touchcancel', handleTouchEnd);
 
-    // クリーンアップ関数
     return () => {
       contentArea.removeEventListener('scroll', handleScroll);
       contentArea.removeEventListener('touchstart', handleTouchStart);
@@ -206,16 +204,14 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
       contentArea.removeEventListener('touchend', handleTouchEnd);
       contentArea.removeEventListener('touchcancel', handleTouchEnd);
     };
-  // 依存配列に isZoomedIn を追加
   }, [isZoomedIn, ZOOM_LEVELS]);
 
+  // ▼▼▼ 変更点2: useLayoutEffectも1つに統合 ▼▼▼
   useLayoutEffect(() => {
-    // --- 中央基点ズームのロジック ---
     const contentArea = contentAreaRef.current;
     if (contentArea) {
       const oldZoomIndex = prevZoomIndexRef.current;
       const newZoomIndex = zoomIndex;
-
       if (oldZoomIndex !== newZoomIndex) {
         const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
         const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
@@ -236,22 +232,25 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
         prevZoomIndexRef.current = newZoomIndex;
       }
     }
-
-    // --- モード切替時のリセットロジック ---
+    // モード切替時のリセットロジック
     setPopoverShip(null);
     setSelectedShips([]);
-    
-  }, [zoomIndex, mode, ZOOM_LEVELS]); // 依存配列にmodeを追加
-  // ▲▲▲ ここまで修正 ▲▲▲
+  }, [zoomIndex, mode, ZOOM_LEVELS]);
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
   const handleDoubleClick = () => { setZoomIndex(0); };
-
-  // ▼▼▼ 変更点3: 背景タップ時の処理を追加 ▼▼▼
   const handleBackgroundTap = () => {
-    setSelectedShips([]); // 船の選択をすべて解除
-    toast.dismiss('ship-distance-toast'); // 距離表示のトーストを消す
+    setSelectedShips([]);
+    toast.dismiss('ship-distance-toast');
   };
+
+  // ▼▼▼ 変更点3: Portalに渡すコンテナをStateで管理 ▼▼▼
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (contentAreaRef.current) {
+      setPortalContainer(contentAreaRef.current);
+    }
+  }, []);
 
   return (
     <div className="relative h-full w-full">
@@ -280,7 +279,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
           ref={contentAreaRef} 
           className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none no-scrollbar`}
           onDoubleClick={handleDoubleClick}
-          // ▼▼▼ 変更点4: onClickイベントを追加 ▼▼▼
           onClick={handleBackgroundTap}
         >
           <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
@@ -343,14 +341,17 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
                     className="absolute" 
                     style={{ top: anchorPosition.top, left: anchorPosition.left }} 
                   />
-                  <PopoverPrimitive.Portal container={contentAreaRef.current}>
+                  {/* ▼▼▼ 変更点4: PortalのcontainerをStateで渡し、条件付きでレンダリング ▼▼▼ */}
+                  {portalContainer && (
+                    <PopoverPrimitive.Portal container={portalContainer}>
                     <PopoverContent 
                       className="w-full max-w-xs sm:w-72"
                       side="top" align="end" collisionPadding={8} sideOffset={12} 
                     >
-                      <ScheduleDetailPopoverContent schedule={schedule} />
-                    </PopoverContent>
-                  </PopoverPrimitive.Portal>
+                        <ScheduleDetailPopoverContent schedule={schedule} />
+                      </PopoverContent>
+                    </PopoverPrimitive.Portal>
+                  )}
                 </PopoverPrimitive.Root>
               );
             })}
