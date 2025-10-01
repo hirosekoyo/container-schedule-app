@@ -10,6 +10,7 @@ import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from "sonner";
 
+// ▼▼▼ 変更点1: Propsにmodeを追加 ▼▼▼
 interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
@@ -62,13 +63,18 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
   </div>
 );
 export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: MobileGanttChartProps) {
+  const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
+  // ▼▼▼ 変更点2: Popover用と距離測定用でstateを分離 ▼▼▼
   const [popoverShip, setPopoverShip] = useState<ScheduleWithOperations | null>(null);
   const [selectedShips, setSelectedShips] = useState<ScheduleWithOperations[]>([]);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
+  
+  // ▼▼▼ 変更点1: ズームレベルを任意の値に設定可能 ▼▼▼
+  // const ZOOM_LEVELS = [1, 1.5, 2, 3];
+  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3]
   const [zoomIndex, setZoomIndex] = useState(0);
-  const ZOOM_LEVELS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3];
   const isZoomedIn = zoomIndex > 0;
-
+  
   const calculateShipDistance = (shipA: ScheduleWithOperations, shipB: ScheduleWithOperations): number => {
     const minA = Math.min(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
     const maxA = Math.max(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
@@ -113,11 +119,12 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
       // 2隻選択された状態になったら距離を計算して表示
       if (newSelectedShips.length === 2) {
         const distance = calculateShipDistance(newSelectedShips[0], newSelectedShips[1]);
+
+        console.log("Calling toast.info with:", { distance });
         
-        // ▼▼▼ 変更点1: 小数点以下を四捨五入して表示 ▼▼▼
         toast.info(`【船間距離】`, {
-          id: 'ship-distance-toast',
-          description: `${newSelectedShips[0].ship_name} と ${newSelectedShips[1].ship_name} の船間 ${Math.round(distance)}m`,
+          id: 'ship-distance-toast', // ユニークなIDを追加
+          description: `${newSelectedShips[0].ship_name} と ${newSelectedShips[1].ship_name} の船間 ${distance.toFixed(2)}m`,
           duration: 4000,
         });
       }
@@ -125,6 +132,10 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
   };
 
 
+    const togglePopover = (scheduleId: number) => {
+    setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [scheduleId]); // 一度に一つだけ開く
+  };
+  
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!contentAreaRef.current) return;
     const contentAreaRect = contentAreaRef.current.getBoundingClientRect();
@@ -153,19 +164,21 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
   const lastDistanceRef = useRef<number | null>(null);
   const prevZoomIndexRef = useRef(zoomIndex);
 
-  // ▼▼▼ 変更点1: useEffectを1つに統合 ▼▼▼
-  useEffect(() => {
+    useEffect(() => {
     const contentArea = contentAreaRef.current;
-    if (!contentArea) return; // コンポーネントがマウントされてから実行
-
+    if (!contentArea || !isZoomedIn) return;
     const handleScroll = () => {
-      if (!isZoomedIn) return;
       if (topAxisRef.current) topAxisRef.current.scrollLeft = contentArea.scrollLeft;
       if (leftAxisRef.current) leftAxisRef.current.scrollTop = contentArea.scrollTop;
     };
     contentArea.addEventListener('scroll', handleScroll);
+    return () => contentArea.removeEventListener('scroll', handleScroll);
+  }, [isZoomedIn]);
+  
+  useEffect(() => {
+    const contentArea = contentAreaRef.current;
+    if (!contentArea) return;
 
-    // --- ピンチ操作のロジック ---
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -191,66 +204,63 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
       }
     };
     const handleTouchEnd = () => { lastDistanceRef.current = null; };
-
     contentArea.addEventListener('touchstart', handleTouchStart);
     contentArea.addEventListener('touchmove', handleTouchMove, { passive: false });
     contentArea.addEventListener('touchend', handleTouchEnd);
     contentArea.addEventListener('touchcancel', handleTouchEnd);
 
     return () => {
-      contentArea.removeEventListener('scroll', handleScroll);
       contentArea.removeEventListener('touchstart', handleTouchStart);
       contentArea.removeEventListener('touchmove', handleTouchMove);
       contentArea.removeEventListener('touchend', handleTouchEnd);
       contentArea.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isZoomedIn, ZOOM_LEVELS]);
+  }, [ZOOM_LEVELS]);
 
-  // ▼▼▼ 変更点2: useLayoutEffectも1つに統合 ▼▼▼
+  // ▼▼▼ 変更点3: 中央基点ズームを実現するためのuseLayoutEffectを追加 ▼▼▼
   useLayoutEffect(() => {
     const contentArea = contentAreaRef.current;
-    if (contentArea) {
-      const oldZoomIndex = prevZoomIndexRef.current;
-      const newZoomIndex = zoomIndex;
-      if (oldZoomIndex !== newZoomIndex) {
-        const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
-        const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
-        const ratio = newZoomLevel / oldZoomLevel;
+    if (!contentArea) return;
 
-        const centerX = contentArea.scrollLeft + contentArea.clientWidth / 2;
-        const centerY = contentArea.scrollTop + contentArea.clientHeight / 2;
+    const oldZoomIndex = prevZoomIndexRef.current;
+    const newZoomIndex = zoomIndex;
 
-        const newCenterX = centerX * ratio;
-        const newCenterY = centerY * ratio;
+    // ズームレベルが変化していない場合は何もしない
+    if (oldZoomIndex === newZoomIndex) return;
 
-        const newScrollLeft = newCenterX - contentArea.clientWidth / 2;
-        const newScrollTop = newCenterY - contentArea.clientHeight / 2;
+    // ズーム比率を計算
+    const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
+    const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
+    const ratio = newZoomLevel / oldZoomLevel;
 
-        contentArea.scrollLeft = newScrollLeft;
-        contentArea.scrollTop = newScrollTop;
+    // ズーム前の中心点の座標を計算
+    const centerX = contentArea.scrollLeft + contentArea.clientWidth / 2;
+    const centerY = contentArea.scrollTop + contentArea.clientHeight / 2;
 
-        prevZoomIndexRef.current = newZoomIndex;
-      }
-    }
-    // モード切替時のリセットロジック
+    // ズーム後の中心点がどこに移動するかを予測
+    const newCenterX = centerX * ratio;
+    const newCenterY = centerY * ratio;
+
+    // 新しいスクロール位置を計算して、予測した中心点が画面中央に来るように調整
+    const newScrollLeft = newCenterX - contentArea.clientWidth / 2;
+    const newScrollTop = newCenterY - contentArea.clientHeight / 2;
+
+    // スクロール位置を即座に更新
+    contentArea.scrollLeft = newScrollLeft;
+    contentArea.scrollTop = newScrollTop;
+
+    // 今回のズームインデックスを次回の「前回」として保存
+    prevZoomIndexRef.current = newZoomIndex;
+  }, [zoomIndex, ZOOM_LEVELS]);
+
+  // ▼▼▼ 変更点4: モードが切り替わったら選択状態をリセットするuseEffectを追加 ▼▼▼
+  useEffect(() => {
     setPopoverShip(null);
     setSelectedShips([]);
-  }, [zoomIndex, mode, ZOOM_LEVELS]);
+  }, [mode]);
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
   const handleDoubleClick = () => { setZoomIndex(0); };
-  const handleBackgroundTap = () => {
-    setSelectedShips([]);
-    toast.dismiss('ship-distance-toast');
-  };
-
-  // ▼▼▼ 変更点3: Portalに渡すコンテナをStateで管理 ▼▼▼
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    if (contentAreaRef.current) {
-      setPortalContainer(contentAreaRef.current);
-    }
-  }, []);
 
   return (
     <div className="relative h-full w-full">
@@ -279,7 +289,6 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
           ref={contentAreaRef} 
           className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none no-scrollbar`}
           onDoubleClick={handleDoubleClick}
-          onClick={handleBackgroundTap}
         >
           <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
             <div className="absolute inset-0">
@@ -341,17 +350,14 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
                     className="absolute" 
                     style={{ top: anchorPosition.top, left: anchorPosition.left }} 
                   />
-                  {/* ▼▼▼ 変更点4: PortalのcontainerをStateで渡し、条件付きでレンダリング ▼▼▼ */}
-                  {portalContainer && (
-                    <PopoverPrimitive.Portal container={portalContainer}>
+                  <PopoverPrimitive.Portal container={contentAreaRef.current}>
                     <PopoverContent 
                       className="w-full max-w-xs sm:w-72"
                       side="top" align="end" collisionPadding={8} sideOffset={12} 
                     >
-                        <ScheduleDetailPopoverContent schedule={schedule} />
-                      </PopoverContent>
-                    </PopoverPrimitive.Portal>
-                  )}
+                      <ScheduleDetailPopoverContent schedule={schedule} />
+                    </PopoverContent>
+                  </PopoverPrimitive.Portal>
                 </PopoverPrimitive.Root>
               );
             })}
