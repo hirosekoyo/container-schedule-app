@@ -7,8 +7,8 @@ import { MobileGanttChart } from './MobileGanttChart';
 import { useRouter } from 'next/navigation';
 import { AnchorInfoModal } from './AnchorInfoModal';
 import { Button } from './ui/button';
-import { Anchor } from 'lucide-react';
-// ▼▼▼ 変更点1: date-fns-tzから必要な関数をインポート ▼▼▼
+// ▼▼▼ 変更点1: Rulerアイコンをインポート ▼▼▼
+import { Anchor, Ruler } from 'lucide-react';
 import { format, toDate } from 'date-fns-tz';
 
 interface MobileViewClientProps {
@@ -25,6 +25,9 @@ export function MobileViewClient({
   const router = useRouter();
   const [isAnchorModalOpen, setIsAnchorModalOpen] = useState(false);
   
+  // ▼▼▼ 変更点2: モード管理用のstateを追加 ▼▼▼
+  const [mode, setMode] = useState<'info' | 'distance'>('info');
+
   const mainAreaRef = useRef<HTMLElement>(null);
   const [viewSize, setViewSize] = useState({ width: 0, height: 0 });
 
@@ -43,7 +46,6 @@ export function MobileViewClient({
     resizeObserver.observe(mainElement);
     return () => resizeObserver.unobserve(mainElement);
   }, []);
-
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -82,16 +84,26 @@ export function MobileViewClient({
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-4 border-b">
-        {/* ▼▼▼ 変更点3: DateNavigatorをdivで囲み、その上に最終更新時刻を表示 ▼▼▼ */}
-        <div className="mt-4">
+      <header className="p-4 border-b flex-shrink-0">
+        {/* ▼▼▼ 変更点: ヘッダーのレイアウト構造を修正 ▼▼▼ */}
+        <div className="mt-4 flex flex-col gap-2">
+          {/* 1行目: 最終更新時刻 */}
           {latestUpdateTime && (
-            <p className="text-left text-[10px] text-gray-500 mb-1">
+            <p className="text-left text-[10px] text-gray-500">
               最終更新: {latestUpdateTime}
             </p>
           )}
+          {/* 2行目: ナビゲーターとボタン */}
           <div className="flex items-center gap-2">
             <div className="flex-grow"><DateNavigator currentDate={date} basePath="/mobile" /></div>
+            <Button 
+              variant={mode === 'distance' ? 'default' : 'outline'} 
+              size="icon" 
+              onClick={() => setMode(prev => prev === 'info' ? 'distance' : 'info')}
+              className="flex-shrink-0"
+            >
+              <Ruler className="h-4 w-4" />
+            </Button>
             <Button variant="outline" size="icon" onClick={() => setIsAnchorModalOpen(true)} className="flex-shrink-0"><Anchor className="h-4 w-4" /></Button>
           </div>
         </div>
@@ -103,6 +115,7 @@ export function MobileViewClient({
             schedules={initialSchedules}
             baseDate={date}
             viewSize={viewSize}
+            mode={mode} // modeをpropとして渡す
           />
         )}
       </main>

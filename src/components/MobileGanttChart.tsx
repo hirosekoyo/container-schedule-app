@@ -8,14 +8,17 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { Button } from './ui/button';
+import { toast } from "sonner";
 
+// ▼▼▼ 変更点1: Propsにmodeを追加 ▼▼▼
 interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
   viewSize: { width: number, height: number };
+  mode: 'info' | 'distance';
 }
 
-// --- ヘルパー関数 (変更なし) ---
+// ... (ヘルパー関数は変更なし)
 const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string) => {
   const arrival = new Date(schedule.arrival_time.replace(' ', 'T'));
   const departure = new Date(schedule.departure_time.replace(' ', 'T'));
@@ -59,11 +62,11 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
     )}
   </div>
 );
-// --- ヘルパー関数ここまで ---
-
-
-export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttChartProps) {
+export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: MobileGanttChartProps) {
   const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
+  // ▼▼▼ 変更点2: Popover用と距離測定用でstateを分離 ▼▼▼
+  const [popoverShip, setPopoverShip] = useState<ScheduleWithOperations | null>(null);
+  const [selectedShips, setSelectedShips] = useState<ScheduleWithOperations[]>([]);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
   
   // ▼▼▼ 変更点1: ズームレベルを任意の値に設定可能 ▼▼▼
@@ -72,8 +75,64 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   const [zoomIndex, setZoomIndex] = useState(0);
   const isZoomedIn = zoomIndex > 0;
   
-  // ▼▼▼ 変更点2: 既存のハンドラ関数を正しく維持 ▼▼▼
-  const togglePopover = (scheduleId: number) => {
+  const calculateShipDistance = (shipA: ScheduleWithOperations, shipB: ScheduleWithOperations): number => {
+    const minA = Math.min(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
+    const maxA = Math.max(Number(shipA.bow_position_m), Number(shipA.stern_position_m));
+    const minB = Math.min(Number(shipB.bow_position_m), Number(shipB.stern_position_m));
+    const maxB = Math.max(Number(shipB.bow_position_m), Number(shipB.stern_position_m));
+    if (minA < maxB && minB < maxA) return 0;
+    const gap = (minA > maxB) ? (minA - maxB) : (minB - maxA);
+    return Math.max(0, gap);
+  };
+  
+  // ▼▼▼ 変更点3: メインのタップロジックをmodeに応じて切り替え ▼▼▼
+  const handleShipTap = (tappedShip: ScheduleWithOperations) => {
+    // --- 情報表示モードのロジック ---
+    if (mode === 'info') {
+      if (popoverShip?.id === tappedShip.id) {
+        setPopoverShip(null); // 同じ船をタップしたら閉じる
+      } else {
+        setPopoverShip(tappedShip); // 違う船をタップしたら開く
+      }
+      return;
+    }
+
+    // --- 船間距離モードのロジック ---
+    if (mode === 'distance') {
+      const alreadySelected = selectedShips.find(s => s.id === tappedShip.id);
+
+      // すでに選択済みの船をタップ -> 選択解除
+      if (alreadySelected) {
+        setSelectedShips(prev => prev.filter(s => s.id !== tappedShip.id));
+        return;
+      }
+      
+      let newSelectedShips = [...selectedShips, tappedShip];
+
+      // 3隻目を選択した場合、一番古い選択を解除
+      if (newSelectedShips.length > 2) {
+        newSelectedShips = newSelectedShips.slice(1);
+      }
+      
+      setSelectedShips(newSelectedShips);
+
+      // 2隻選択された状態になったら距離を計算して表示
+      if (newSelectedShips.length === 2) {
+        const distance = calculateShipDistance(newSelectedShips[0], newSelectedShips[1]);
+
+        console.log("Calling toast.info with:", { distance });
+        
+        toast.info(`【船間距離】`, {
+          id: 'ship-distance-toast', // ユニークなIDを追加
+          description: `${newSelectedShips[0].ship_name} と ${newSelectedShips[1].ship_name} の船間 ${distance.toFixed(2)}m`,
+          duration: 4000,
+        });
+      }
+    }
+  };
+
+
+    const togglePopover = (scheduleId: number) => {
     setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [scheduleId]); // 一度に一つだけ開く
   };
   
@@ -105,7 +164,7 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
   const lastDistanceRef = useRef<number | null>(null);
   const prevZoomIndexRef = useRef(zoomIndex);
 
-  useEffect(() => {
+    useEffect(() => {
     const contentArea = contentAreaRef.current;
     if (!contentArea || !isZoomedIn) return;
     const handleScroll = () => {
@@ -194,13 +253,16 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
     prevZoomIndexRef.current = newZoomIndex;
   }, [zoomIndex, ZOOM_LEVELS]);
 
+  // ▼▼▼ 変更点4: モードが切り替わったら選択状態をリセットするuseEffectを追加 ▼▼▼
+  useEffect(() => {
+    setPopoverShip(null);
+    setSelectedShips([]);
+  }, [mode]);
+
+  useLayoutEffect(() => { /* ... (中央基点ズームのロジックは変更なし) ... */ });
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
-
-  // ▼▼▼ 変更点1: ダブルタップ用のハンドラ関数を追加 ▼▼▼
-  const handleDoubleClick = () => {
-    setZoomIndex(0); // ズームレベルを全画面表示に戻す
-  };
+  const handleDoubleClick = () => { setZoomIndex(0); };
 
   return (
     <div className="relative h-full w-full">
@@ -257,17 +319,24 @@ export function MobileGanttChart({ schedules, baseDate, viewSize }: MobileGanttC
             const left = (left_bit - CHART_START_BIT) * BIT_WIDTH_PX;
             const width = (right_bit - left_bit) * BIT_WIDTH_PX;
 
+              // ▼▼▼ 変更点5: 距離モードでの選択状態を判定 ▼▼▼
+              const isSelectedForDistance = mode === 'distance' && selectedShips.some(s => s.id === schedule.id);
+
               return (
                 <PopoverPrimitive.Root 
                   key={schedule.id}
-                  open={openPopoverIds.includes(schedule.id)}
-                  onOpenChange={() => togglePopover(schedule.id)}
+                  open={mode === 'info' && popoverShip?.id === schedule.id}
+                  onOpenChange={(isOpen) => { if (!isOpen) setPopoverShip(null); }}
                 >
                   <PopoverPrimitive.Trigger asChild>
                     <div 
-                      className="absolute flex items-center justify-center rounded border bg-sky-100/80 p-1 text-sky-800 cursor-pointer" 
+                      // ▼▼▼ 変更点6: 選択状態に応じてスタイルを動的に変更 ▼▼▼
+                      className={`absolute flex items-center justify-center rounded border p-1 cursor-pointer transition-all
+                        ${isSelectedForDistance ? 'ring-2 ring-offset-2 ring-blue-500 bg-blue-100 text-blue-800' : 'bg-sky-100/80 text-sky-800'}
+                      `}
                       style={{ top, height, left, width, minWidth: isZoomedIn ? 28 : 0 }}
                       onPointerDown={handlePointerDown}
+                      onClick={(e) => { e.stopPropagation(); handleShipTap(schedule); }}
                     >
                     <div className={`flex items-center gap-1 font-bold break-words text-center ${!isZoomedIn ? 'text-[8px] leading-tight' : 'text-[10px]'}`}>
                       <span>{schedule.arrival_side === '左舷' ? '←' : ''}</span>
