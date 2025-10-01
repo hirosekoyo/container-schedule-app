@@ -10,7 +10,6 @@ import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from "sonner";
 
-// ▼▼▼ 変更点1: Propsにmodeを追加 ▼▼▼
 interface MobileGanttChartProps {
   schedules: ScheduleWithOperations[];
   baseDate: string;
@@ -63,8 +62,6 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
   </div>
 );
 export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: MobileGanttChartProps) {
-  const [openPopoverIds, setOpenPopoverIds] = useState<number[]>([]);
-  // ▼▼▼ 変更点2: Popover用と距離測定用でstateを分離 ▼▼▼
   const [popoverShip, setPopoverShip] = useState<ScheduleWithOperations | null>(null);
   const [selectedShips, setSelectedShips] = useState<ScheduleWithOperations[]>([]);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
@@ -119,23 +116,17 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
       // 2隻選択された状態になったら距離を計算して表示
       if (newSelectedShips.length === 2) {
         const distance = calculateShipDistance(newSelectedShips[0], newSelectedShips[1]);
-
-        console.log("Calling toast.info with:", { distance });
         
+        // ▼▼▼ 変更点1: 小数点以下を四捨五入して表示 ▼▼▼
         toast.info(`【船間距離】`, {
-          id: 'ship-distance-toast', // ユニークなIDを追加
-          description: `${newSelectedShips[0].ship_name} と ${newSelectedShips[1].ship_name} の船間 ${distance.toFixed(2)}m`,
+          id: 'ship-distance-toast',
+          description: `${newSelectedShips[0].ship_name} と ${newSelectedShips[1].ship_name} の船間 ${Math.round(distance)}m`,
           duration: 4000,
         });
       }
     }
   };
 
-
-    const togglePopover = (scheduleId: number) => {
-    setOpenPopoverIds(prev => prev.includes(scheduleId) ? prev.filter(id => id !== scheduleId) : [scheduleId]); // 一度に一つだけ開く
-  };
-  
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!contentAreaRef.current) return;
     const contentAreaRect = contentAreaRef.current.getBoundingClientRect();
@@ -217,52 +208,50 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
     };
   }, [ZOOM_LEVELS]);
 
-  // ▼▼▼ 変更点3: 中央基点ズームを実現するためのuseLayoutEffectを追加 ▼▼▼
+  // ▼▼▼ 変更点2: 2つのuseEffectを1つに統合 ▼▼▼
   useLayoutEffect(() => {
+    // --- 中央基点ズームのロジック ---
     const contentArea = contentAreaRef.current;
-    if (!contentArea) return;
+    if (contentArea) {
+      const oldZoomIndex = prevZoomIndexRef.current;
+      const newZoomIndex = zoomIndex;
 
-    const oldZoomIndex = prevZoomIndexRef.current;
-    const newZoomIndex = zoomIndex;
+      if (oldZoomIndex !== newZoomIndex) {
+        const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
+        const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
+        const ratio = newZoomLevel / oldZoomLevel;
 
-    // ズームレベルが変化していない場合は何もしない
-    if (oldZoomIndex === newZoomIndex) return;
+        const centerX = contentArea.scrollLeft + contentArea.clientWidth / 2;
+        const centerY = contentArea.scrollTop + contentArea.clientHeight / 2;
 
-    // ズーム比率を計算
-    const oldZoomLevel = ZOOM_LEVELS[oldZoomIndex];
-    const newZoomLevel = ZOOM_LEVELS[newZoomIndex];
-    const ratio = newZoomLevel / oldZoomLevel;
+        const newCenterX = centerX * ratio;
+        const newCenterY = centerY * ratio;
 
-    // ズーム前の中心点の座標を計算
-    const centerX = contentArea.scrollLeft + contentArea.clientWidth / 2;
-    const centerY = contentArea.scrollTop + contentArea.clientHeight / 2;
+        const newScrollLeft = newCenterX - contentArea.clientWidth / 2;
+        const newScrollTop = newCenterY - contentArea.clientHeight / 2;
 
-    // ズーム後の中心点がどこに移動するかを予測
-    const newCenterX = centerX * ratio;
-    const newCenterY = centerY * ratio;
+        contentArea.scrollLeft = newScrollLeft;
+        contentArea.scrollTop = newScrollTop;
 
-    // 新しいスクロール位置を計算して、予測した中心点が画面中央に来るように調整
-    const newScrollLeft = newCenterX - contentArea.clientWidth / 2;
-    const newScrollTop = newCenterY - contentArea.clientHeight / 2;
+        prevZoomIndexRef.current = newZoomIndex;
+      }
+    }
 
-    // スクロール位置を即座に更新
-    contentArea.scrollLeft = newScrollLeft;
-    contentArea.scrollTop = newScrollTop;
-
-    // 今回のズームインデックスを次回の「前回」として保存
-    prevZoomIndexRef.current = newZoomIndex;
-  }, [zoomIndex, ZOOM_LEVELS]);
-
-  // ▼▼▼ 変更点4: モードが切り替わったら選択状態をリセットするuseEffectを追加 ▼▼▼
-  useEffect(() => {
+    // --- モード切替時のリセットロジック ---
     setPopoverShip(null);
     setSelectedShips([]);
-  }, [mode]);
-
-  useLayoutEffect(() => { /* ... (中央基点ズームのロジックは変更なし) ... */ });
+    
+  }, [zoomIndex, mode, ZOOM_LEVELS]); // 依存配列にmodeを追加
+  // ▲▲▲ ここまで修正 ▲▲▲
 
   const fullViewBitLabels = [35, 40, 45, 50, 55, 60, 65];
   const handleDoubleClick = () => { setZoomIndex(0); };
+
+  // ▼▼▼ 変更点3: 背景タップ時の処理を追加 ▼▼▼
+  const handleBackgroundTap = () => {
+    setSelectedShips([]); // 船の選択をすべて解除
+    toast.dismiss('ship-distance-toast'); // 距離表示のトーストを消す
+  };
 
   return (
     <div className="relative h-full w-full">
@@ -291,6 +280,8 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
           ref={contentAreaRef} 
           className={`${isZoomedIn ? 'overflow-auto' : 'overflow-hidden'} overscroll-behavior-none no-scrollbar`}
           onDoubleClick={handleDoubleClick}
+          // ▼▼▼ 変更点4: onClickイベントを追加 ▼▼▼
+          onClick={handleBackgroundTap}
         >
           <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
             <div className="absolute inset-0">
