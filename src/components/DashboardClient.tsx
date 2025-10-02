@@ -9,8 +9,8 @@ import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
-import { Printer } from 'lucide-react';
-import { MemoEdit } from '@/components/MemoEdit';
+// ▼▼▼ 変更点1: Home アイコンをインポート ▼▼▼
+import { Printer, Home } from 'lucide-react';
 
 interface DashboardClientProps {
   initialReport: DailyReport | null;
@@ -18,7 +18,7 @@ interface DashboardClientProps {
   initialLatestImportId: string | null;
   date: string;
   currentImportId?: string;
-  isPrintView?: boolean; // 印刷モード用のpropsを追加
+  isPrintView?: boolean;
 }
 
 export function DashboardClient({
@@ -27,7 +27,7 @@ export function DashboardClient({
   initialLatestImportId,
   date,
   currentImportId,
-  isPrintView = false, // デフォルトはfalse
+  isPrintView = false,
 }: DashboardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
@@ -47,10 +47,17 @@ export function DashboardClient({
         {/* 印刷時ではない場合のみ、ナビゲーションボタンを表示 */}
         {!isPrintView && (
           <div className="flex items-center gap-4">
+            {/* ▼▼▼ 変更点2: ホームに戻るボタンを追加 ▼▼▼ */}
+            <Button asChild variant="outline" size="icon">
+              <Link href="/home" aria-label="ホームに戻る">
+                <Home className="h-4 w-4" />
+              </Link>
+            </Button>
+            
             <DateNavigator 
              currentDate={date} 
              importId={currentImportId} 
-             basePath="/dashboard" // basePathを指定
+             basePath="/dashboard"
             />
             <Button variant="outline" onClick={() => window.open(`/print/${date}`, '_blank')}>
               <Printer className="mr-2 h-4 w-4" /> 印刷
@@ -85,13 +92,7 @@ export function DashboardClient({
           isPrintView={isPrintView}
         />
       </div>
-
-      {/* <MemoEdit 
-        initialMemo={initialReport?.memo || null}
-        reportDate={date}
-      /> */}
       
-      {/* 印刷時ではない場合のみ、編集モーダルをレンダリング */}
       {!isPrintView && (
         <EditScheduleDialog
           schedule={selectedSchedule}

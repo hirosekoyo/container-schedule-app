@@ -32,9 +32,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
 
   const getWindColorClass = (speed: number | null | undefined): string => {
     if (speed == null) return '';
-    if (speed >= 20) return 'bg-red-200/50';
-    if (speed >= 16) return 'bg-orange-200/50';
-    if (speed >= 10) return 'bg-yellow-200/50';
+    if (speed >= 20) return 'bg-red-300/30';
+    if (speed >= 16) return 'bg-orange-300/30';
+    if (speed >= 10) return 'bg-yellow-300/30';
     return '';
   };
   
