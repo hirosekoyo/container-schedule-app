@@ -265,7 +265,11 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
           onDoubleClick={handleDoubleClick}
           onClick={handleBackgroundTap}
         >
-          <div className="relative transition-all duration-300" style={{ width: totalChartWidth, height: totalChartHeight }}>
+          {/* ▼▼▼ ここを修正 ▼▼▼ */}
+          <div 
+            className="relative" /* transition-all duration-300 を削除 */
+            style={{ width: totalChartWidth, height: totalChartHeight }}
+          >
             <div className="absolute inset-0">
               {timeLabels.map((_, i) => <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: i * 2 * HOUR_HEIGHT_PX }} />)}
               {bitLabels.map((_, i) => <div key={`v-${i}`} className="absolute h-full border-l border-gray-100" style={{ left: i * BIT_WIDTH_PX }} />)}
@@ -303,7 +307,10 @@ export function MobileGanttChart({ schedules, baseDate, viewSize, mode }: Mobile
                 >
                   <PopoverPrimitive.Trigger asChild>
                     <div 
-                      className={`absolute flex items-center justify-center rounded border p-1 cursor-pointer transition-all ${isSelectedForDistance ? 'ring-2 ring-offset-2 ring-blue-500 bg-blue-100 text-blue-800' : 'bg-sky-100/80 text-sky-800'}`}
+                      // ▼▼▼ ここも修正 ▼▼▼
+                      className={`absolute flex items-center justify-center rounded border p-1 cursor-pointer 
+                        ${isSelectedForDistance ? 'ring-2 ring-offset-2 ring-blue-500 bg-blue-100 text-blue-800' : 'bg-sky-100/80 text-sky-800'}
+                      `} /* transition-all を削除 */
                       style={{ top, height, left, width, minWidth: isZoomedIn ? 28 : 0 }}
                       onPointerDown={handlePointerDown}
                       onClick={(e) => { e.stopPropagation(); handleShipTap(schedule); }}
