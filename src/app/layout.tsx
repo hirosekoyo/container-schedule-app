@@ -16,6 +16,12 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "船舶動静",
   },
+    viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1, // 拡大を許可しない
+    userScalable: false, // ユーザーによるズーム操作を禁止
+  },
   // --- 【ここまで】 ---
 };
 
