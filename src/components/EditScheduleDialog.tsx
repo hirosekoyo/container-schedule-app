@@ -143,52 +143,60 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     const bow_m = Math.floor(bow_m_float);
     const stern_m = Math.floor(stern_m_float);
 
-    const formatForDB = (localString: string) => {
-      if (!localString) return '';
+    const formatForDB = (localString: string): string => {
+      // この関数はnullを返さないことを保証する (呼び出し元でnullチェック済みのため)
       return `${localString.replace('T', ' ')}:00`;
     };
 
-    const dataForHash = {
+    // ▼▼▼ ここからが最終的な修正箇所です ▼▼▼
+
+    // 1. DBに渡すための基本データを作成 (エラー前のコードをベース)
+    const dataForDB = {
+      location: schedule?.location || 'IC',
+      ship_name: scheduleData.ship_name,
       berth_number: scheduleData.berth_number,
       arrival_time: formatForDB(scheduleData.arrival_time_local),
       departure_time: formatForDB(scheduleData.departure_time_local),
       arrival_side: scheduleData.arrival_side,
       bow_position_m: bow_m,
       stern_position_m: stern_m,
-    };
-
-    const newDataHash = [
-      dataForHash.berth_number,
-      dataForHash.arrival_time,
-      dataForHash.departure_time,
-      dataForHash.arrival_side,
-      dataForHash.bow_position_m,
-      dataForHash.stern_position_m,
-    ].join('|');
-    
-    // ▼▼▼ 変更点5: 保存データにpilotとtugを追加 ▼▼▼
-    const dataToSave = {
-      ship_name: scheduleData.ship_name,
       planner_company: scheduleData.planner_company,
       remarks: scheduleData.remarks,
       pilot: scheduleData.pilot,
       tug: scheduleData.tug,
       crane_count: scheduleData.crane_count,
-      ...dataForHash,
-      data_hash: newDataHash,
-      last_import_id: latestImportId,
     };
     
+    // 2. parser.ts / DB関数と完全に同じフィールド・順番でdata_hashを再計算
+    const newDataHash = [
+      dataForDB.location,
+      dataForDB.ship_name,
+      dataForDB.berth_number,
+      dataForDB.arrival_time,
+      dataForDB.departure_time,
+      dataForDB.arrival_side,
+      dataForDB.bow_position_m,
+      dataForDB.stern_position_m,
+      dataForDB.planner_company,
+    ].join('|');
+
+    // 3. 最終的に保存するオブジェクトを構築
+    const dataToSave = {
+      ...dataForDB,
+      data_hash: newDataHash,
+      last_import_id: latestImportId,
+      changed_fields: null, // 手動更新時は常にリセット
+    };
+
     const opsToSave = operationsData.map(op => ({
       start_time: op.start_time_local || null,
       crane_names: op.crane_names,
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
     }));
-
+    
     if (schedule) {
       startTransition(async () => {
-        // @ts-ignore
         const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
         if (!error) {onOpenChange(false); router.refresh(); }
         else { alert(`更新中にエラーが発生しました: ${error.message}`); }
@@ -199,7 +207,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
         schedule_date: scheduleDateForNew,
       };
       startTransition(async () => {
-        // @ts-ignore
         const { error } = await createScheduleWithOperations(createDataToSave, opsToSave);
         if (!error) { alert("新しい予定が作成されました。"); onOpenChange(false); router.refresh(); }
         else { alert(`作成中にエラーが発生しました: ${error.message}`); }

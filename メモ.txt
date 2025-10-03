@@ -123,39 +123,6 @@ ALTER TABLE public.schedules
 ALTER COLUMN location DROP DEFAULT;
 ```
 
-setting.json
-
- {
-    "extensions.ignoreRecommendations": true,
-    "security.workspace.trust.untrustedFiles": "open",
-    "workbench.colorCustomizations": {
-        "scrollbarSlider.activeBackground": "#414a54",
-        "scrollbarSlider.background": "#414a54",
-        "scrollbarSlider.hoverBackground": "#414a54"
-      },
-      "workbench.editor.enablePreview": false,
-      "workbench.editorAssociations": {
-        "*.xlsx": "default"
-      },
-      "editor.renderWhitespace": "trailing",
-      "editor.minimap.enabled": false,
-      "explorer.sortOrder": "type",
-      "sql-formatter.dialect": "pl/sql",
-
-      "editor.guides.bracketPairs": true,
-      "editor.cursorBlinking": "smooth", // カーソルが滑らかに点滅するように
-      "editor.cursorSmoothCaretAnimation": "on",
-      "workbench.colorTheme": "Default Dark Modern",
-      "git.openRepositoryInParentFolders": "never",
-      "editor.mouseWheelZoom": true,
-      "editor.copyWithSyntaxHighlighting": false,
-      "markdown-pdf.mermaidServer": " https://unpkg.com/mermaid@10.4.0/dist/mermaid.min.js ",
-      "markdown-pdf.highlightStyle": "a11y-dark.css",
-      "git.autofetch": true,
-      "jdk.telemetry.enabled": false, // カーソルの点滅をアニメーション表示する
-
-}
-
 
 吉田さんメモ
 
@@ -178,6 +145,10 @@ setting.json
 
 ・印刷レイアウトはこれで良い？
 今後作成する香椎とレイアウトを統一するために極限情報の左側を、IC・香椎の固有情報コーナーにしたいです。
+
+・スマホアプリに船間表示機能を追加しましたが、ポートオブ博多との誤差が±１あるので実装するか迷っています。
+ポートオブ博多がビット表示では小数点以下を切り捨てているのに、船間表示だけは小数点以下も考慮して計算しているためです。
+ビット位置をもとにした計算は合っていて、今までも動静表を元に計算していた人は同じことではあるが、、、
 
 〇変更点
 ・横向き印刷の新書式対応

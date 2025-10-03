@@ -2,7 +2,8 @@ import { ScheduleInsert } from "./supabase/actions";
 import { PLANNER_TO_STEVEDORE_MAP } from './constants';
 import { bitNotationToMeters } from './coordinateConverter';
 
-type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
+// ScheduleDataForDBの型定義は変更なし
+type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at' | 'updated_at'>; // updated_atも除外
 
 const MIN_BIT_NUMBER_TO_PROCESS = 22;
 
@@ -36,7 +37,8 @@ const determineBerthNumber = (bow_m: number, stern_m: number): number => {
 const parseScheduleBlock = (
   textBlock: string,
   referenceYear: number,
-  importId: string
+  importId: string,
+  location: string // locationを受け取る
 ): ScheduleDataForDB[] => {
   const cleanedBlock = textBlock.trim();
   if (!cleanedBlock) return [];
@@ -109,8 +111,9 @@ const parseScheduleBlock = (
     const planner_company = agentName ? (PLANNER_TO_STEVEDORE_MAP[agentName] || agentName) : undefined;
 
     const importRemarks = remarksMatch ? remarksMatch[1].trim() : undefined;
-    
+
     const baseScheduleData = {
+      location, // locationをオブジェクトに含める
       ship_name,
       berth_number,
       arrival_time: formatForDB(arrivalDate),
@@ -122,12 +125,15 @@ const parseScheduleBlock = (
     };
     
     const data_hash = [
+      baseScheduleData.location, // 1. location を先頭に追加
+      baseScheduleData.ship_name,
       baseScheduleData.berth_number,
       baseScheduleData.arrival_time,
       baseScheduleData.departure_time,
       baseScheduleData.arrival_side,
       baseScheduleData.bow_position_m,
       baseScheduleData.stern_position_m,
+      baseScheduleData.planner_company // planner_companyもhashの対象に含める
     ].join('|');
 
     let finalRemarks: string | null = importRemarks || null;
@@ -144,7 +150,7 @@ const parseScheduleBlock = (
     while (currentDate <= departureDate) {
       const pad = (n: number) => String(n).padStart(2, '0');
       schedules.push({
-        ...baseScheduleData,
+        ...baseScheduleData, // ここでlocationも一緒に展開される
         schedule_date: `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`,
         data_hash,
         last_import_id: importId,
@@ -161,14 +167,17 @@ const parseScheduleBlock = (
   }
 };
 
+// ▼▼▼ 変更点2: 引数に location を追加 ▼▼▼
 export const parseMultipleSchedules = (
   fullText: string,
   referenceYear: number,
-  importId: string
+  importId: string,
+  location: string // locationを受け取る
 ) => {
   const trimmedText = fullText.trim();
   if (!trimmedText) return [];
   const processedText = trimmedText.replace(/(^連絡先.*$)/gm, '$1\n__BLOCK_SEPARATOR__');
   const blocks = processedText.split('__BLOCK_SEPARATOR__').filter(block => block.trim().length > 0);
-  return blocks.flatMap(block => parseScheduleBlock(block, referenceYear, importId));
+  // parseScheduleBlockに関数にlocationを渡す
+  return blocks.flatMap(block => parseScheduleBlock(block, referenceYear, importId, location));
 };

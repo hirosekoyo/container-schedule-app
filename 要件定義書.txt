@@ -168,60 +168,104 @@ COMMENT ON COLUMN public.posts.content IS '掲示内容の本文';
 COMMENT ON COLUMN public.posts.is_attention IS 'trueの場合、目立たせるためのフラグ';
 
 6. Supabase DB関数 (構成SQL)
-6.1. upsert_schedules_with_check (一括インポート用)
-役割: 受け取ったスケジュールデータの配列を元に、高度なUPSERT処理を行う。remarks と changed_fields を正しく処理する。
-code
-SQL
+### `upsert_schedules_with_check` DB関数 (最終版)
+
+```sql
+-- 役割: 受け取ったスケジュールデータの配列(jsonb)を元に、高度なUPSERT処理を行う。
+--       - 新規データはINSERTする。
+--       - 既存データ(location, schedule_date, ship_nameで特定)は、内容(data_hash)を比較してUPDATEする。
+--       - data_hashに差分があれば、どのフィールドが変更されたかを changed_fields に記録する。
+--       - data_hashに差分がなければ、last_import_id のみ更新し、changed_fields をリセットする。
 CREATE OR REPLACE FUNCTION public.upsert_schedules_with_check(schedules_data jsonb)
 RETURNS TABLE(updated_count integer, inserted_count integer)
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  new_schedule JSONB; existing_schedule RECORD; _updated_count INT := 0; _inserted_count INT := 0;
-  old_values TEXT[]; new_values TEXT[];
-  field_names TEXT[] := ARRAY['ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
-  changed_fields_array TEXT[]; i INT;
+  new_schedule JSONB; 
+  existing_schedule RECORD; 
+  _updated_count INT := 0; 
+  _inserted_count INT := 0;
+  old_values TEXT[]; 
+  new_values TEXT[];
+  --【重要】この配列の順番は、parser.tsでdata_hashを生成する際の順番と完全に一致させる必要がある
+  field_names TEXT[] := ARRAY['location', 'ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
+  changed_fields_array TEXT[]; 
+  i INT;
 BEGIN
+  -- 受け取ったJSON配列の各要素をループ処理
   FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data) LOOP
-    SELECT * INTO existing_schedule FROM public.schedules WHERE schedule_date = (new_schedule->>'schedule_date')::DATE AND ship_name = (new_schedule->>'ship_name');
+    --【変更点】検索条件に location を追加し、ユニークキーを3つにする
+    SELECT * INTO existing_schedule 
+    FROM public.schedules 
+    WHERE 
+      location = (new_schedule->>'location') AND
+      schedule_date = (new_schedule->>'schedule_date')::DATE AND 
+      ship_name = (new_schedule->>'ship_name');
     
+    -- 既存のレコードが見つからなかった場合: 新規INSERT
     IF existing_schedule IS NULL THEN
+      --【変更点】INSERT文のカラムリストとVALUESリストに location を追加
       INSERT INTO public.schedules (
-        ship_name, berth_number, arrival_time, departure_time, arrival_side,
+        location, ship_name, berth_number, arrival_time, departure_time, arrival_side,
         bow_position_m, stern_position_m, planner_company, schedule_date,
         data_hash, last_import_id, changed_fields, remarks
       ) VALUES (
-        new_schedule->>'ship_name', (new_schedule->>'berth_number')::INT, (new_schedule->>'arrival_time')::TIMESTAMP,
-        (new_schedule->>'departure_time')::TIMESTAMP, new_schedule->>'arrival_side', (new_schedule->>'bow_position_m')::NUMERIC,
-        (new_schedule->>'stern_position_m')::NUMERIC, new_schedule->>'planner_company', (new_schedule->>'schedule_date')::DATE,
-        new_schedule->>'data_hash', new_schedule->>'last_import_id', (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks'
+        new_schedule->>'location', new_schedule->>'ship_name', 
+        (new_schedule->>'berth_number')::INT, (new_schedule->>'arrival_time')::TIMESTAMP,
+        (new_schedule->>'departure_time')::TIMESTAMP, new_schedule->>'arrival_side', 
+        (new_schedule->>'bow_position_m')::NUMERIC, (new_schedule->>'stern_position_m')::NUMERIC, 
+        new_schedule->>'planner_company', (new_schedule->>'schedule_date')::DATE,
+        new_schedule->>'data_hash', new_schedule->>'last_import_id', 
+        (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks'
       );
       _inserted_count := _inserted_count + 1;
     ELSE
+      -- 既存のレコードが見つかった場合: UPDATE処理
+      -- data_hashを比較して、内容に変更があったか判定
       IF existing_schedule.data_hash IS DISTINCT FROM (new_schedule->>'data_hash') THEN
-        old_values := string_to_array(existing_schedule.data_hash, '|'); new_values := string_to_array(new_schedule->>'data_hash', '|'); changed_fields_array := ARRAY[]::TEXT[];
-        FOR i IN 1..array_length(field_names, 1) LOOP IF old_values[i] IS DISTINCT FROM new_values[i] THEN changed_fields_array := array_append(changed_fields_array, field_names[i]); END IF; END LOOP;
+        -- data_hashに差分あり: 変更内容を記録してUPDATE
+        old_values := string_to_array(existing_schedule.data_hash, '|'); 
+        new_values := string_to_array(new_schedule->>'data_hash', '|'); 
+        changed_fields_array := ARRAY[]::TEXT[];
+        -- field_names配列を元に、どのフィールドが変更されたかチェック
+        FOR i IN 1..array_length(field_names, 1) LOOP 
+          IF old_values[i] IS DISTINCT FROM new_values[i] THEN 
+            changed_fields_array := array_append(changed_fields_array, field_names[i]); 
+          END IF; 
+        END LOOP;
+        
+        --【変更点】UPDATE文のSET句に location を追加
         UPDATE public.schedules SET
-          arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, departure_time = (new_schedule->>'departure_time')::TIMESTAMP,
-          arrival_side = new_schedule->>'arrival_side', bow_position_m = (new_schedule->>'bow_position_m')::NUMERIC, stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
-          planner_company = new_schedule->>'planner_company', berth_number = (new_schedule->>'berth_number')::INT, remarks = new_schedule->>'remarks',
-          data_hash = new_schedule->>'data_hash', last_import_id = new_schedule->>'last_import_id',
+          location = new_schedule->>'location',
+          arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, 
+          departure_time = (new_schedule->>'departure_time')::TIMESTAMP,
+          arrival_side = new_schedule->>'arrival_side', 
+          bow_position_m = (new_schedule->>'bow_position_m')::NUMERIC, 
+          stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
+          planner_company = new_schedule->>'planner_company', 
+          berth_number = (new_schedule->>'berth_number')::INT, 
+          remarks = new_schedule->>'remarks',
+          data_hash = new_schedule->>'data_hash', 
+          last_import_id = new_schedule->>'last_import_id',
           changed_fields = CASE WHEN array_length(changed_fields_array, 1) > 0 THEN to_jsonb(changed_fields_array) ELSE NULL END
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       ELSE
+        -- data_hashに差分なし: last_import_idと備考のみ更新
         UPDATE public.schedules SET
           last_import_id = new_schedule->>'last_import_id',
           changed_fields = NULL,
-          remarks = new_schedule->>'remarks' -- 備考も更新対象に含める
+          remarks = new_schedule->>'remarks'
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       END IF;
     END IF;
   END LOOP;
+  -- 更新件数と新規作成件数を返す
   RETURN QUERY SELECT _updated_count, _inserted_count;
 END;
 $$;
+
 6.2. create_schedule_with_operations (手動での新規作成用)
 code
 SQL
