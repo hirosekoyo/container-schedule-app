@@ -121,11 +121,8 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
   const selectedUnits = formData.maintenance_unit?.split(', ').filter(Boolean) ?? [];
   const prevTenkenData = previousTenken ? tenkenkubun[previousTenken.tenkenkubun.toString()] : null;
   const currentTenkenData = formData.tenkenkubun ? tenkenkubun[formData.tenkenkubun.toString()] : null;
-
-  // ▼▼▼ 変更点: ボタン表示用のテキストを生成するロジックを追加 ▼▼▼
   const currentTenkenKey = formData.tenkenkubun?.toString() ?? '3';
   const nextTenkenKey = ((formData.tenkenkubun ?? 3) % 3 + 1).toString();
-  
   const currentKukaku = tenkenkubun[currentTenkenKey] ? tenkenkubun[currentTenkenKey][0] : '-';
   const nextKukaku = tenkenkubun[nextTenkenKey] ? tenkenkubun[nextTenkenKey][0] : '-';
 
@@ -184,9 +181,33 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
               </div>
             </div>
           </div>
-          {/* ▲▲▲ ここまで変更 ▲▲▲ */}
+          
+          <div><Label>点検予定</Label><div className="mt-2 rounded-md border p-4 space-y-4">
+            <div className="flex flex-wrap gap-2 items-center min-h-[40px] bg-gray-50 p-2 rounded-md">{selectedUnits.length>0?selectedUnits.map(u=>(<div key={u} className="flex items-center gap-1 bg-blue-100 text-blue-800 text-sm font-semibold px-2 py-1 rounded-full"><span>{u}</span><button type="button" onClick={()=>removeUnit(u)} className="text-blue-500 hover:text-blue-700">&times;</button></div>)):<p className="text-sm text-gray-500">ボタンまたは入力欄からユニットを追加してください。</p>}</div>
+            <div className="flex flex-wrap gap-2">{CRANE_OPTIONS.map(c=>(<Button type="button" key={c} variant={selectedUnits.includes(c)?"default":"outline"} onClick={()=>toggleCraneSelection(c)}>{c}</Button>))}</div>
+            
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="その他ユニット名..."
+                value={freeInput}
+                onChange={handleFreeInputChange}
+                onKeyDown={(e) => {
+                  // e.nativeEvent.isComposing は React v16.5以降で利用可能
+                  // (e.nativeEvent as any).isComposing を使うと古い型定義でもエラーを回避できる
+                  if ((e.nativeEvent as any).isComposing || e.keyCode === 229) {
+                    return;
+                  }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addFreeInputToUnits();
+                  }
+                }}
+              />
+              <Button type="button" onClick={addFreeInputToUnits}>追加</Button>
+            </div>
 
-          <div><Label>点検予定</Label><div className="mt-2 rounded-md border p-4 space-y-4"><div className="flex flex-wrap gap-2 items-center min-h-[40px] bg-gray-50 p-2 rounded-md">{selectedUnits.length>0?selectedUnits.map(u=>(<div key={u} className="flex items-center gap-1 bg-blue-100 text-blue-800 text-sm font-semibold px-2 py-1 rounded-full"><span>{u}</span><button type="button" onClick={()=>removeUnit(u)} className="text-blue-500 hover:text-blue-700">&times;</button></div>)):<p className="text-sm text-gray-500">ボタンまたは入力欄からユニットを追加してください。</p>}</div><div className="flex flex-wrap gap-2">{CRANE_OPTIONS.map(c=>(<Button type="button" key={c} variant={selectedUnits.includes(c)?"default":"outline"} onClick={()=>toggleCraneSelection(c)}>{c}</Button>))}</div><div className="flex gap-2"><Input type="text" placeholder="その他ユニット名..." value={freeInput} onChange={handleFreeInputChange} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();addFreeInputToUnits();}}} /><Button type="button" onClick={addFreeInputToUnits}>追加</Button></div></div></div>
+          </div></div>
           <div>
             <Label>終了点検</Label>
             <div className="mt-2 rounded-md border p-4 space-y-2 text-sm">
@@ -212,7 +233,7 @@ export function EditDailyReportDialog({ report, report_date, open, onOpenChange 
                   点検区分を変更 ( {currentKukaku} → {nextKukaku} )
                 </Button>
               </div>
-            </div>
+              </div>
           </div>
         </form>
         <DialogFooter className="pt-4 flex-shrink-0">
