@@ -266,20 +266,25 @@ BEGIN
 END;
 $$;
 
-6.2. create_schedule_with_operations (手動での新規作成用)
-code
-SQL
+#### 1. `create_schedule_with_operations` (新規作成用) の修正版
+
+```sql
+-- 役割: 手動での新規スケジュール作成時に、schedulesテーブルとcargo_operationsテーブルにデータを追加するトランザクション関数。
 CREATE OR REPLACE FUNCTION public.create_schedule_with_operations(schedule_data jsonb, operations_data jsonb)
 RETURNS bigint LANGUAGE plpgsql AS $$
-DECLARE new_schedule_id bigint; op jsonb;
+DECLARE 
+  new_schedule_id bigint; 
+  op jsonb;
 BEGIN
+  --【変更点】INSERT文のカラムリストとVALUESリストに "location" を追加
   INSERT INTO public.schedules (
-    ship_name, berth_number, arrival_time, departure_time, arrival_side, 
+    location, ship_name, berth_number, arrival_time, departure_time, arrival_side, 
     bow_position_m, stern_position_m, planner_company, schedule_date, 
     data_hash, last_import_id, changed_fields, remarks,
-    pilot, tug, crane_count -- 追加
+    pilot, tug, crane_count
   )
   VALUES (
+    schedule_data->>'location', -- この行を追加
     schedule_data->>'ship_name', (schedule_data->>'berth_number')::INT, 
     (schedule_data->>'arrival_time')::TIMESTAMP, (schedule_data->>'departure_time')::TIMESTAMP, 
     schedule_data->>'arrival_side', (schedule_data->>'bow_position_m')::NUMERIC, 
@@ -287,37 +292,54 @@ BEGIN
     (schedule_data->>'schedule_date')::DATE, schedule_data->>'data_hash', 
     schedule_data->>'last_import_id', (schedule_data->'changed_fields')::JSONB, 
     schedule_data->>'remarks',
-    (schedule_data->>'pilot')::BOOLEAN, (schedule_data->>'tug')::BOOLEAN, -- 追加
-    (schedule_data->>'crane_count')::INTEGER -- 追加
+    (schedule_data->>'pilot')::BOOLEAN, (schedule_data->>'tug')::BOOLEAN,
+    (schedule_data->>'crane_count')::INTEGER
   )
   RETURNING id INTO new_schedule_id;
   
+  -- 荷役作業(cargo_operations)の処理 (変更なし)
   IF operations_data IS NOT NULL AND jsonb_array_length(operations_data) > 0 THEN
     FOR op IN SELECT * FROM jsonb_array_elements(operations_data) LOOP
       INSERT INTO public.cargo_operations (schedule_id, start_time, crane_names, container_count, stevedore_company)
       VALUES (new_schedule_id, (op->>'start_time')::TIMESTAMP, op->>'crane_names', (op->>'container_count')::INT, op->>'stevedore_company');
     END LOOP;
   END IF;
+  
   RETURN new_schedule_id;
 END;
 $$;
-6.3. update_schedule_with_operations (手動での更新用)
-code
-SQL
+```
+
+#### 2. `update_schedule_with_operations` (手動更新用) の修正版
+
+```sql
+-- 役割: 手動での既存スケジュール更新時に、schedulesテーブルとcargo_operationsテーブルのデータを更新するトランザクション関数。
 CREATE OR REPLACE FUNCTION public.update_schedule_with_operations(p_schedule_id bigint, schedule_data jsonb, operations_data jsonb)
 RETURNS void LANGUAGE plpgsql AS $$
-DECLARE op jsonb;
+DECLARE 
+  op jsonb;
 BEGIN
+  --【変更点】UPDATE文のSET句に "location" を追加
   UPDATE public.schedules SET
-    ship_name = schedule_data->>'ship_name', arrival_time = (schedule_data->>'arrival_time')::TIMESTAMP, departure_time = (schedule_data->>'departure_time')::TIMESTAMP,
-    arrival_side = schedule_data->>'arrival_side', bow_position_m = (schedule_data->>'bow_position_m')::NUMERIC, stern_position_m = (schedule_data->>'stern_position_m')::NUMERIC,
-    planner_company = schedule_data->>'planner_company', berth_number = (schedule_data->>'berth_number')::INT, remarks = schedule_data->>'remarks',
-    pilot = (schedule_data->>'pilot')::BOOLEAN, -- 追加
-    tug = (schedule_data->>'tug')::BOOLEAN,     -- 追加
-    crane_count = (schedule_data->>'crane_count')::INTEGER, -- 追加
-    data_hash = schedule_data->>'data_hash', last_import_id = schedule_data->>'last_import_id', changed_fields = NULL
+    location = schedule_data->>'location', -- この行を追加
+    ship_name = schedule_data->>'ship_name', 
+    arrival_time = (schedule_data->>'arrival_time')::TIMESTAMP, 
+    departure_time = (schedule_data->>'departure_time')::TIMESTAMP,
+    arrival_side = schedule_data->>'arrival_side', 
+    bow_position_m = (schedule_data->>'bow_position_m')::NUMERIC, 
+    stern_position_m = (schedule_data->>'stern_position_m')::NUMERIC,
+    planner_company = schedule_data->>'planner_company', 
+    berth_number = (schedule_data->>'berth_number')::INT, 
+    remarks = schedule_data->>'remarks',
+    pilot = (schedule_data->>'pilot')::BOOLEAN,
+    tug = (schedule_data->>'tug')::BOOLEAN,
+    crane_count = (schedule_data->>'crane_count')::INTEGER,
+    data_hash = schedule_data->>'data_hash', 
+    last_import_id = schedule_data->>'last_import_id', 
+    changed_fields = NULL
   WHERE id = p_schedule_id;
 
+  -- 荷役作業(cargo_operations)の処理 (変更なし)
   DELETE FROM public.cargo_operations WHERE schedule_id = p_schedule_id;
   
   IF operations_data IS NOT NULL AND jsonb_array_length(operations_data) > 0 THEN
@@ -328,21 +350,6 @@ BEGIN
   END IF;
 END;
 $$;
-6.4. truncate_schedules_and_dependencies (データリセット用)
-code
-SQL
-CREATE OR REPLACE FUNCTION public.get_latest_tenkenkubun()
-RETURNS TABLE(report_date date, tenkenkubun integer)
-LANGUAGE sql
-AS $$
-  SELECT report_date, tenkenkubun
-  FROM public.ic_daily
-  WHERE tenkenkubun IS NOT NULL
-  ORDER BY report_date DESC
-  LIMIT 1;
-$$;
--- DB関数として定義することで、RLS(Row Level Security)が有効な場合でも安全に呼び出せる
-(注: actions.ts内で直接SQLを書いても機能しますが、関数化が推奨されます)
 
 7. プロジェクトディレクトリ構成と各ファイルの概要 (Ver.5.0)
 7. 環境変数設定

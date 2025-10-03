@@ -150,8 +150,8 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
 
     // ▼▼▼ ここからが最終的な修正箇所です ▼▼▼
 
-    // 1. DBに渡すための基本データを作成 (エラー前のコードをベース)
-    const dataForDB = {
+ // 1. data_hashの元となるデータを定義
+    const dataForHash = {
       location: schedule?.location || 'IC',
       ship_name: scheduleData.ship_name,
       berth_number: scheduleData.berth_number,
@@ -161,55 +161,51 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       bow_position_m: bow_m,
       stern_position_m: stern_m,
       planner_company: scheduleData.planner_company,
+    };
+    const newDataHash = Object.values(dataForHash).join('|');
+    
+    // 2. 最終的に保存するオブジェクトを構築
+    const dataToSave = {
+      ...dataForHash,
       remarks: scheduleData.remarks,
       pilot: scheduleData.pilot,
       tug: scheduleData.tug,
       crane_count: scheduleData.crane_count,
-    };
-    
-    // 2. parser.ts / DB関数と完全に同じフィールド・順番でdata_hashを再計算
-    const newDataHash = [
-      dataForDB.location,
-      dataForDB.ship_name,
-      dataForDB.berth_number,
-      dataForDB.arrival_time,
-      dataForDB.departure_time,
-      dataForDB.arrival_side,
-      dataForDB.bow_position_m,
-      dataForDB.stern_position_m,
-      dataForDB.planner_company,
-    ].join('|');
-
-    // 3. 最終的に保存するオブジェクトを構築
-    const dataToSave = {
-      ...dataForDB,
       data_hash: newDataHash,
       last_import_id: latestImportId,
-      changed_fields: null, // 手動更新時は常にリセット
+      changed_fields: null,
     };
-
+    
     const opsToSave = operationsData.map(op => ({
       start_time: op.start_time_local || null,
       crane_names: op.crane_names,
       container_count: op.container_count ? Number(op.container_count) : null,
       stevedore_company: op.stevedore_company,
     }));
-    
+
     if (schedule) {
+      // --- 編集モード ---
       startTransition(async () => {
-        const { error } = await updateScheduleWithOperations(schedule.id, dataToSave, opsToSave);
-        if (!error) {onOpenChange(false); router.refresh(); }
+        // 更新時には不要な schedule_date を除外
+        const { schedule_date, ...updateData } = { ...dataToSave, schedule_date: schedule.schedule_date };
+        const { error } = await updateScheduleWithOperations(schedule.id, updateData, opsToSave);
+        if (!error) { onOpenChange(false); router.refresh(); }
         else { alert(`更新中にエラーが発生しました: ${error.message}`); }
       });
-    } else {
+    } else { 
+      // --- 新規作成モード ---
       const createDataToSave = {
         ...dataToSave,
         schedule_date: scheduleDateForNew,
+        // ここで location が絶対に null/undefined にならないことを保証する
+        location: dataToSave.location || 'IC' 
       };
       startTransition(async () => {
         const { error } = await createScheduleWithOperations(createDataToSave, opsToSave);
         if (!error) { alert("新しい予定が作成されました。"); onOpenChange(false); router.refresh(); }
-        else { alert(`作成中にエラーが発生しました: ${error.message}`); }
+        else { 
+          alert(`作成中にエラーが発生しました: ${error.message}`); 
+        }
       });
     }
   };
