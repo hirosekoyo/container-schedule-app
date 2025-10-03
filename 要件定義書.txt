@@ -1,65 +1,77 @@
-要件定義書 Ver.5.0 (プロジェクト再現可能版)
-1. アプリ概要
-アプリ名: コンテナ船荷役予定管理アプリ
-目的: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCやスマートフォンからリアルタイムに最新の予定を確認・編集できる環境を構築する。
-利用者: 荷役機器を管理する港湾管理会社の担当者。
-2. 機能要件
-日付ごとの予定を表示・編集するメイン画面。初回表示の高速化のため、ページ本体はサーバーコンポーネントとしてデータ取得を行い、インタラクティブなUI部分はクライアントコンポーネント(DashboardClient)に分離したハイブリッドレンダリング方式を採用。
-ページナビゲーション (DateNavigator):
-表示日付の前日・翌日に移動するための矢印ボタンを配置。
-現在の日付をクリックするとカレンダーが表示され、任意の日付にジャンプできる。
-ページ遷移時、URLクエリパラメータに含まれるimportIdを維持する。
-ヘッダー情報エリア (DashboardHeader):
-横長1列の4ブロック構成で、通常時・印刷時で共通のレイアウトを採用。
-ブロック1 (タイトル): 「IC」と太文字で表示。
-ブロック2 (日付・当直): 選択された日付の「日付」「当直者」「サポート者」を表示。
-ブロック3 (風速・ミーティング): 上段に「ミーティング時間」「早出かわし時間」、下段に8段階の「風速テーブル」を表示。風速の値に応じてセルが色分けされる（10以上:黄, 16以上:オレンジ, 20以上:赤）。
-ブロック4 (点検): 「点検予定」「終了点検」を表示。
-通常表示時、カード全体をクリックすると、日次情報を編集するためのモーダル(EditDailyReportDialog)が表示される。
-船舶図（ガントチャート）エリア (GanttChart):
-縦軸: 時間（0:00 〜 翌2:00）。グリッド線は1時間毎、太線と時刻ラベルは3時間毎。
-横軸: ビット番号（33〜64）。画面幅に応じて動的に拡縮する。
-クレーン止め位置: ビット番号の上部に、クレーンの止め位置を示す静的な番号ボックスを表示。
-差分ハイライト: インポート直後は、last_import_idとchanged_fieldsの値に基づき、削除候補（赤）、変更あり（黄）の矩形ブロックを色分け表示する。
-各ブロッククリックで予定編集モーダル(EditScheduleDialog)が開く。
-荷役予定詳細テーブルエリア (ScheduleTable):
-DBから岸壁 (昇順) > 着岸時間 (昇順)の順でソートして表示。
-G数: schedules.crane_countの値を表示（0の場合は'-'）。
-PILOT/TUG: schedules.pilot, schedules.tugの値を「有」「無」で表示。
-各行クリックで予定編集モーダルが開く。ゴミ箱アイコンクリックで予定を削除。
-最終行に「新規作成行」を常設し、クリックで空の予定編集モーダルが開く。
-日次情報編集モーダル (EditDailyReportDialog):
-当直者、サポート者、風速（個別・一括）、点検予定(maintenance_unit)、終了点検(tenkenkubun)、ミーティング時間、早出かわし時間、会社を編集可能。
-点検予定: クレーン名ボタンとフリー入力欄で、カンマ区切りの文字列として保存。
-終了点検: 前回値から自動で次の区分をセット。「変更」ボタンでC1→C2→D→C1と循環する。
-時刻入力: 5:00-9:00の30分刻みのカスタムコンポーネント(TimePicker)を使用。クリアボタン付き。
-コンテンツが長い場合は、フォームエリアのみがスクロールし、保存ボタンはフッターに固定される。
-予定編集モーダル (EditScheduleDialog):
-アコーディオンUI: 編集頻度の低い「船舶情報」は初期状態で折りたたまれている。
-G数 (crane_count): 荷役作業行の追加・削除に連動して自動でカウントが更新される。
-PILOT/TUG: チェックボックスでtrue/falseを編集。
-モバイル用ガントチャート (MobileGanttChart):
-ズーム機能: ピンチイン・ピンチアウト、および画面右下のズームボタンで段階的なズームが可能。ダブルタップで全体表示に戻る。ズームは常に画面中央が基点となる。
-スクロール: ズーム時は縦横にスクロール可能。スクロールバーは非表示。
-情報表示: 各船舶ブロックをタップすると、詳細情報がPopoverで表示される。
-ダッシュボードの「印刷」ボタンから新しいタブで開かれる、A4横向きに最適化されたページ。
-レイアウト:
-DashboardHeaderは印刷専用のレイアウトで表示。
-GanttChartの下に、隙間をあけてクレーンの障害物チャート(CraneLimitChartの描画ロジック)と、対応するビット番号が表示される。
-CraneLimitChartの下に、極限位置テーブルが表示される。
-操作UI（日付ナビ、インポートボタン）は非表示。
-中央目安線: 画面プレビュー時のみ、用紙の縦横中央を示す目安線（トンボ）が表示される。
-3. 非機能要件
-権限管理: 開発中は認証なし。
-レスポンシブデザイン: PC（通常画面）、スマートフォン、A4用紙（印刷画面）に最適化。
-4. 開発・技術要件
-データベース: Supabase (PostgreSQL)
-技術スタック: Next.js (App Router), TypeScript, Tailwind CSS, Shadcn/ui, Sonner, date-fns, lucide-react
-5. データベース設計 (Ver.5.0)
-code
-SQL
+### **要件定義書 Ver.6.0 (複数地点拡張対応版)**
+
+#### **1. アプリ概要**
+
+*   **アプリ名**: コンテナ船荷役予定管理アプリ
+*   **目的**: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCやスマートフォンからリアルタイムに最新の予定を確認・編集できる環境を構築する。
+*   **利用者**: 荷役機器を管理する港湾管理会社の担当者。
+
+#### **2. 機能要件**
+
+##### **2.1. ホーム画面 (`/home`)**
+
+PCユーザー向けのトップページ。主要機能へのリンクメニューと、全社・全地点向けの掲示板機能を提供する。
+
+*   **機能リンク**:
+    *   明日の動静表 (IC) へ移動
+    *   船舶予定のインポート (IC) へ移動
+    *   外部リンク (PORT OF HAKATA)
+    *   使い方ガイド (PDF)
+*   **掲示板機能 (`PostsBoard`)**:
+    *   ホーム画面下部に縦1列で表示。
+    *   **表示**: `posts`テーブルから掲載期限内の掲示をすべて取得し、作成日時の降順で表示。`is_attention`フラグがtrueの投稿はメガホンアイコン付きで強調表示される。
+    *   **CRUD操作**: 新規作成・編集・削除が可能。操作は専用のモーダル(`EditPostDialog`)で行う。
+
+##### **2.2. PC版ダッシュボード (`/dashboard/[location]/[date]`)**
+※現在はまだ[location]のルーティング未作成。今後実装予定。
+
+地点(`location`)ごと、日付ごとの予定を表示・編集するメイン画面。初回表示の高速化のため、ページ本体はサーバーコンポーネントとしてデータ取得を行い、UI部分はクライアントコンポーネント(`DashboardClient`)に分離したハイブリッドレンダリング方式を採用。
+
+*   **ヘッダー情報エリア (`DashboardHeader`)**:
+    *   横長1列の4ブロック構成。通常時・印刷時でレイアウトが動的に変化。
+    *   **ブロック1 (タイトル)**: 地点名（例: 「IC」）を表示。印刷時のみ表示。
+    *   **ブロック2 (日付・当直)**: 日付、当直者、サポート者を表示。
+    *   **ブロック3 (風速・ミーティング)**: 上段に「ミーティング時間」「早出かわし」、下段に「風速テーブル」を表示。風速値に応じてセルが色分けされる。印刷時はミーティング/かわし非表示。
+    *   **ブロック4 (点検)**: 「点検予定」「終了点検」を表示。印刷時は終了点検非表示。
+    *   通常表示時、カード全体をクリックすると日次情報編集モーダル(`EditDailyReportDialog`)が表示される。
+*   **船舶図（ガントチャート）エリア (`GanttChart`)**:
+    *   地点ごとの設定(`constants.ts`)に基づき、縦軸（時間）・横軸（ビット番号）・クレーン止め位置を描画。
+    *   印刷時のみ、ガントチャート直下に隙間をあけて障害物チャート（BUSBAR, CB等）とビット番号が表示される。
+*   **荷役予定詳細テーブルエリア (`ScheduleTable`)**:
+    *   `G数` (`crane_count`)、`PILOT`/`TUG`（有/無）の情報を表示。
+*   **お知らせボタン**: `is_attention`がtrueの掲示がある場合のみ、ヘッダーに点滅する「お知らせがあります」ボタンを表示。クリックするとホーム画面の掲示板セクションへ別タブで遷移する。
+
+##### **2.3. スマートフォン版画面 (`/mobile/[location]/[date]`)**
+
+地点ごと・日付ごとの閲覧に特化した画面。
+
+*   **最終更新時刻**: `schedules`テーブルの最新の`updated_at`を日本時間でヘッダーに表示。
+*   **船間表示モード**: ヘッダーのボタンで「情報表示モード」と「船間表示モード」を切り替え。
+    *   **情報表示モード**: 船タップで詳細Popoverを表示。
+    *   **船間表示モード**: 2隻の船をタップすると、船間の距離（メートル、小数点以下なし）をトースト通知で表示。3隻目をタップすると、2隻目と3隻目の距離を表示。背景タップで選択解除。
+*   **モバイル用ガントチャート (`MobileGanttChart`)**:
+    *   **ズーム**: ピンチイン・アウト、ダブルタップでのリセット、ズームボタン（実装済みだが非表示中）による段階的なズームが可能。ズームは常に画面中央が基点となる。
+    *   **ズームロック**: Popover表示中は、意図しないページ全体のズームがJavaScriptによって無効化される。
+
+##### **2.4. 各種モーダル**
+
+*   **日次情報編集モーダル (`EditDailyReportDialog`)**:
+    *   `ic_daily`テーブルの全カラムを編集可能。
+    *   **終了点検**: `constants.ts`の定義に基づき、`C1`→`C2`→`D`のように区画名で変更内容を表示。
+*   **予定編集モーダル (`EditScheduleDialog`)**:
+    *   船舶情報セクションはアコーディオンで折りたたみ可能（初期状態は閉）。
+    *   `G数`, `PILOT`, `TUG`を編集可能。
+*   **掲示板編集モーダル (`EditPostDialog`)**:
+    *   掲示の新規作成・編集を行う。掲載期限はカレンダーで選択（必須、初期値は翌日）。
+
+#### **3. データベース設計 (Ver.6.0)**
+
+##### **3.1. `schedules` (船舶予定テーブル)**
+`location`カラムを追加し、地点ごとのデータを管理する。
+```sql
 CREATE TABLE public.schedules (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  location TEXT NOT NULL, --【新規】地点を識別 ('IC', 'Kashii'など)
   schedule_date DATE NOT NULL,
   ship_name TEXT NOT NULL,
   berth_number INT NOT NULL,
@@ -70,18 +82,22 @@ CREATE TABLE public.schedules (
   stern_position_m NUMERIC NOT NULL,
   planner_company TEXT,
   remarks TEXT,
-  data_hash TEXT,
-  last_import_id TEXT,
-  changed_fields JSONB,
-  -- Ver.4.1からの追加
   pilot BOOLEAN NOT NULL DEFAULT false,
   tug BOOLEAN NOT NULL DEFAULT false,
   crane_count INTEGER,
-  created_at TIMESTAMPTZ DEFAULT now()
+  data_hash TEXT,
+  last_import_id TEXT,
+  changed_fields JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ --【新規】自動更新用の更新日時
 );
-5.2. cargo_operations (荷役予定テーブル)
-code
-SQL
+--【新規】パフォーマンス向上のための複合インデックス
+CREATE INDEX ON public.schedules (location, schedule_date);
+```
+
+##### **3.2. `cargo_operations` (荷役予定テーブル)**
+`schedules`とのリレーションに変更なし。
+```sql
 CREATE TABLE public.cargo_operations (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   schedule_id BIGINT NOT NULL REFERENCES public.schedules(id) ON DELETE CASCADE,
@@ -89,11 +105,13 @@ CREATE TABLE public.cargo_operations (
   crane_names TEXT,
   container_count INT,
   stevedore_company TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-5.3. ic_daily (日次情報テーブル)
-code
-SQL
+```
+
+##### **3.3. `ic_daily` (IC地点 日次情報テーブル)**
+`daily_reports`から`ic_daily`に改名済み。
+```sql
 CREATE TABLE public.ic_daily (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   report_date DATE NOT NULL UNIQUE,
@@ -105,13 +123,17 @@ CREATE TABLE public.ic_daily (
   wind_speed_5 NUMERIC, wind_speed_6 NUMERIC,
   wind_speed_7 NUMERIC, wind_speed_8 NUMERIC,
   maintenance_unit TEXT,
-  -- Ver.4.1からの追加
   tenkenkubun INTEGER,
   meeting_time TIME WITHOUT TIME ZONE,
   kawasi_time TIME WITHOUT TIME ZONE,
   company TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+```
+
+##### **3.4. `posts` (掲示板テーブル)**
+ホーム画面での掲示板機能のために新設。
+```sql
 CREATE TABLE public.posts (
   -- 主キー: 自動採番されるID
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -390,3 +412,53 @@ package.json: プロジェクトの依存関係とスクリプトを定義する
 /src/components/MobileGanttChart.tsx: ズーム機能がピンチイン・アウト、ボタン操作、ダブルタップリセットに変更。画面中央基点のズームを実現。
 /src/lib/constants.ts: TIME_OPTIONS_30_MINUTES, tenkenkubunなどの定数が追加された。
 /src/lib/supabase/actions.ts: getLatestTenkenkubunサーバーアクションが追加された。
+*   **新規・変更ファイル概要**:
+    *   `/src/app/home/HomeClient.tsx`: 【新規】ホーム画面のUIとインタラクションを担うクライアントコンポーネント。
+    *   `/src/app/home/page.tsx`: 【変更】サーバーコンポーネント化。データ取得を行い`HomeClient`に渡す役割に専念。
+    *   `/src/components/PostsBoard.tsx`: 【新規】掲示板の表示と操作（CRUD）を行うクライアントコンポーネント。
+    *   `/src/components/EditPostDialog.tsx`: 【新規】掲示の作成・編集用モーダル。
+    *   `/src/components/ui/TimePicker.tsx`: 【新規】時刻選択用のカスタムUIコンポーネント。
+    *   `/src/lib/supabase/actions.ts`: `posts`テーブル用のCRUDサーバーアクション (`getPosts`, `upsertPost`, `deletePost`) と、`checkAttentionPosts`が追加された。
+
+#### **6. 将来の拡張計画: 「香椎」地点への対応方針**
+
+本アプリケーションを「香椎(kc)」地点に対応させるための具体的なステップ。
+
+1.  **URL構造の変更**:
+    *   Next.jsの動的ルーティング機能を利用し、URL構造を`/[location]/[date]`形式に統一する。
+    *   `/app/dashboard/[date]` -> `/app/dashboard/[location]/[date]`
+    *   `/app/mobile/[date]` -> `/app/mobile/[location]/[date]`
+    *   `/app/print/[date]` -> `/app/print/[location]/[date]`
+    *   これにより、`page.tsx`は各1つのままで、`params.location`から現在の地点名を取得できるようになる。
+
+2.  **データベースの準備**:
+    *   `kc_daily`テーブルを作成する。`ic_daily`とカラムが異なる場合は、それに合わせて定義する。
+    *   `schedules`テーブルには既に`location`カラムがあるため、香椎のデータは`location = 'Kashii'`としてINSERT/UPDATEする。
+
+3.  **定数の追加 (`constants.ts`)**:
+    *   `LOCATION_CONFIG`オブジェクトに`Kashii`のエントリを追加する。ここには、香椎のビット番号範囲、クレーン止め位置、障害物などの固有情報をすべて定義する。
+        ```typescript
+        export const LOCATION_CONFIG = {
+          IC: { ... },
+          Kashii: {
+            CHART_START_BIT: 1, // 例
+            CHART_END_BIT: 32,  // 例
+            craneStops: [ /* 香椎用の定義 */ ],
+            obstacles: [ /* 香椎用の定義 */ ],
+          }
+        };
+        ```
+
+4.  **サーバーアクションの修正 (`actions.ts`)**:
+    *   `getSchedulesByDate(date)` -> `getSchedulesByDate(date, location)`のように、`location`を引数に追加する。内部のSupabaseクエリに`.eq('location', location)`を追加する。
+    *   `getDailyReportByDate(date)` -> `getDailyReportByDate(date, location)`のように変更する。内部で`location`の値に応じて`ic_daily`または`kc_daily`からSELECTするように分岐ロジックを追加する。
+    *   同様に`upsertDailyReport`なども`location`を引数に取るように修正する。
+
+5.  **コンポーネントの汎用化**:
+    *   `DashboardClient`, `GanttChart`, `MobileGanttChart`などの主要コンポーネントが、親から`location` propを受け取るように修正する。
+    *   `GanttChart`などの描画コンポーネントは、propsで受け取った`location`を使い、`LOCATION_CONFIG[location]`から適切な設定を読み込んで描画する。
+    *   `DashboardHeader`なども、`location`に応じてタイトル（「IC」など）を動的に表示するように修正する。
+
+6.  **インポート機能の修正 (`parser.ts`)**:
+    *   インポート画面で、どの地点のデータとしてインポートするかを選択するUI（例: ラジオボタン）を追加する。
+    *   `parseMultipleSchedules`関数が`location`を受け取り、生成する`ScheduleDataForDB`オブジェクトに`location: 'Kashii'`のように含めるように修正する。
