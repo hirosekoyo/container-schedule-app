@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { Database } from "@/types/database.types";
 import { createSupabaseServerClient } from "./server";
 
+// Post用の型エイリアス
+export type Post = Database["public"]["Tables"]["posts"]["Row"];
+export type PostInsert = Database["public"]["Tables"]["posts"]["Insert"];
+
 export type ScheduleWithOperations = Database["public"]["Tables"]["schedules"]["Row"] & {
   cargo_operations: Database["public"]["Tables"]["cargo_operations"]["Row"][];
 };
@@ -306,4 +310,85 @@ export async function getLatestTenkenkubun(): Promise<{ date: string, tenkenkubu
   }
 
   return { date: data.report_date, tenkenkubun: tenkenkubunNumber };
+}
+
+/**
+ * 掲載期限内のすべての掲示を取得する
+ */
+export async function getPosts(): Promise<Post[]> {
+  const supabase = createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false }); // 作成日時の降順（新しいものが上）
+
+  if (error) {
+    console.error("Error fetching posts:", error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * 掲示を一件追加または更新する
+ */
+export async function upsertPost(postData: PostInsert) {
+  const supabase = createSupabaseServerClient();
+  
+  const { error } = await supabase
+    .from('posts')
+    .upsert(postData)
+    .select();
+
+  if (error) {
+    console.error("Error upserting post:", error.message);
+    return { error };
+  }
+
+  revalidatePath('/home'); // ホーム画面のキャッシュをクリア
+  return { error: null };
+}
+
+/**
+ * 指定されたIDの掲示を削除する
+ */
+export async function deletePost(postId: number) {
+  const supabase = createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+  
+  if (error) {
+    console.error("Error deleting post:", error.message);
+    return { error };
+  }
+
+  revalidatePath('/home'); // ホーム画面のキャッシュをクリア
+  return { error: null };
+}
+
+/**
+ * is_attentionがtrueの掲示が存在するかどうかをチェックする
+ */
+export async function checkAttentionPosts(): Promise<boolean> {
+  const supabase = createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // ▼▼▼ ここからが修正箇所です ▼▼▼
+  const { count, error } = await supabase
+    .from('posts')
+    .select('*', { count: 'exact', head: true }) 
+    .eq('is_attention', true)
+
+  if (error) {
+    console.error("Error checking attention posts:", error.message);
+    return false;
+  }
+
+  return (count ?? 0) > 0;
+  // ▲▲▲ ここまで修正 ▲▲▲
 }

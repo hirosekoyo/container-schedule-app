@@ -9,8 +9,8 @@ import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
-// ▼▼▼ 変更点1: Home アイコンをインポート ▼▼▼
-import { Printer, Home } from 'lucide-react';
+// ▼▼▼ BellRing アイコンをインポート ▼▼▼
+import { Printer, Home, BellRing } from 'lucide-react';
 
 interface DashboardClientProps {
   initialReport: DailyReport | null;
@@ -19,15 +19,17 @@ interface DashboardClientProps {
   date: string;
   currentImportId?: string;
   isPrintView?: boolean;
+  hasAttentionPosts: boolean; // 新しいpropを受け取る
 }
 
 export function DashboardClient({
-  initialReport,
+    initialReport,
   initialSchedules,
   initialLatestImportId,
   date,
   currentImportId,
   isPrintView = false,
+  hasAttentionPosts, // 新しいpropを受け取る
 }: DashboardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
@@ -40,14 +42,21 @@ export function DashboardClient({
   };
 
   return (
-    // ルート要素に `print-content` クラスを追加
     <div className={`flex flex-1 flex-col gap-4 md:gap-8 ${isPrintView ? 'print-content' : ''}`}>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">船舶動静表-IC</h1>
-        {/* 印刷時ではない場合のみ、ナビゲーションボタンを表示 */}
         {!isPrintView && (
           <div className="flex items-center gap-4">
-            {/* ▼▼▼ 変更点2: ホームに戻るボタンを追加 ▼▼▼ */}
+            {/* ▼▼▼ お知らせボタンを条件付きで表示 ▼▼▼ */}
+            {hasAttentionPosts && (
+              <Button asChild variant="destructive" className="animate-pulse">
+                <Link href="/home#board" target="_blank" rel="noopener noreferrer">
+                  <BellRing className="mr-2 h-4 w-4" />
+                  お知らせがあります
+                </Link>
+              </Button>
+            )}
+
             <Button asChild variant="outline" size="icon">
               <Link href="/home" aria-label="ホームに戻る">
                 <Home className="h-4 w-4" />

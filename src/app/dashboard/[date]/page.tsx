@@ -1,41 +1,37 @@
-import { getDailyReportByDate, getSchedulesByDate, getLatestImportId } from '@/lib/supabase/actions';
-import { DashboardClient } from '@/components/DashboardClient'; // 新しいクライアントコンポーネントをインポート
-import { Suspense } from 'react';
+import { DashboardClient } from "@/components/DashboardClient";
+import { getDailyReportByDate, getSchedulesByDate, getLatestImportId, checkAttentionPosts } from "@/lib/supabase/actions"; // checkAttentionPosts をインポート
+import { Suspense } from "react";
 
-export const dynamic = 'force-dynamic';
-
-interface DashboardPageProps {
+// pageコンポーネントを async に変更
+export default async function DashboardPage({
+  params: { date },
+  searchParams,
+}: {
   params: { date: string };
-  searchParams: { importId?: string };
-}
-
-export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
-  const { date } = params;
-  const currentImportId = searchParams.importId;
-
-  // 1. データ取得はサーバーサイドで実行
-  const [report, schedules, latestImportIdFromDB] = await Promise.all([
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  // 3つのデータ取得を並列で実行
+  const [report, schedules, latestImportId, hasAttentionPosts] = await Promise.all([
     getDailyReportByDate(date),
     getSchedulesByDate(date),
     getLatestImportId(date),
+    checkAttentionPosts(), // 新しいアクションを呼び出し
   ]);
-
-  const finalImportId = currentImportId || latestImportIdFromDB;
+  
+  const currentImportId = typeof searchParams.importId === 'string' ? searchParams.importId : undefined;
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Suspense fallback={<div>Loading...</div>}>
-          {/* 2. 取得したデータをpropsとしてクライアントコンポーネントに渡す */}
-          <DashboardClient
-            initialReport={report}
-            initialSchedules={schedules}
-            initialLatestImportId={finalImportId}
-            date={date}
-            currentImportId={currentImportId}
-          />
-        </Suspense>
-      </main>
+    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <Suspense fallback={<p>Loading...</p>}>
+        <DashboardClient
+          initialReport={report}
+          initialSchedules={schedules}
+          initialLatestImportId={latestImportId}
+          date={date}
+          currentImportId={currentImportId}
+          hasAttentionPosts={hasAttentionPosts} // 新しいpropを渡す
+        />
+      </Suspense>
     </div>
   );
 }
