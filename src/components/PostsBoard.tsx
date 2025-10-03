@@ -55,8 +55,8 @@ export function PostsBoard({ initialPosts }: PostsBoardProps) {
             <CardHeader>
               <CardTitle className="text-base flex justify-between items-start">
                 <div className="space-y-1">
-                  <span>To: {post.to || '各位'}</span>
-                  <span className="block text-xs text-gray-500">From: {post.from || '匿名希望'}</span>
+                  <span>To: {post.to || 'ALL'}</span>
+                  <span className="block text-xs text-gray-500">From: {post.from || '匿名'}</span>
                 </div>
                 {post.is_attention && <BellRing className="h-5 w-5 text-yellow-500" />}
               </CardTitle>

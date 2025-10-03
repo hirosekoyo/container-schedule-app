@@ -88,7 +88,7 @@ export function EditPostDialog({ post, open, onOpenChange }: EditPostDialogProps
             {/* ▼▼▼ 変更点3: placeholderを追加 ▼▼▼ */}
             <div>
               <Label htmlFor="from">From</Label>
-              <Input id="from" name="from" value={formData.from || ''} onChange={handleChange} placeholder="例: 〇日当直 (未記入で匿名希望)" />
+              <Input id="from" name="from" value={formData.from || ''} onChange={handleChange} placeholder="例: 〇日当直 (未記入で匿名)" />
             </div>
             <div>
               <Label htmlFor="to">To</Label>
