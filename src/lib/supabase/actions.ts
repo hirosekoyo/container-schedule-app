@@ -4,13 +4,17 @@ import { revalidatePath } from "next/cache";
 import { Database } from "@/types/database.types";
 import { createSupabaseServerClient } from "./server";
 
+// Post用の型エイリアス
+export type Post = Database["public"]["Tables"]["posts"]["Row"];
+export type PostInsert = Database["public"]["Tables"]["posts"]["Insert"];
+
 export type ScheduleWithOperations = Database["public"]["Tables"]["schedules"]["Row"] & {
   cargo_operations: Database["public"]["Tables"]["cargo_operations"]["Row"][];
 };
 export type ScheduleInsert = Database["public"]["Tables"]["schedules"]["Insert"];
 export type OperationInsert = Database["public"]["Tables"]["cargo_operations"]["Insert"];
-export type DailyReport = Database["public"]["Tables"]["daily_reports"]["Row"];
-export type DailyReportInsert = Database["public"]["Tables"]["daily_reports"]["Insert"];
+export type DailyReport = Database["public"]["Tables"]["ic_daily"]["Row"];
+export type DailyReportInsert = Database["public"]["Tables"]["ic_daily"]["Insert"];
 
 // parser.tsから渡されるデータの型を明示的に定義
 type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
@@ -21,7 +25,7 @@ type ScheduleDataForDB = Omit<ScheduleInsert, 'id' | 'created_at'>;
 export async function getDailyReportByDate(date: string): Promise<DailyReport | null> {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("daily_reports")
+    .from("ic_daily")
     .select("*")
     .eq("report_date", date)
     .maybeSingle(); // .single() から .maybeSingle() に変更
@@ -64,7 +68,7 @@ export async function getSchedulesByDate(date: string): Promise<ScheduleWithOper
  */
 export async function upsertDailyReport(reportData: DailyReportInsert) {
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase.from("daily_reports").upsert(reportData, { onConflict: 'report_date' });
+  const { error } = await supabase.from("ic_daily").upsert(reportData, { onConflict: 'report_date' });
   if (error) { console.error("Error upserting daily report:", error.message); return { error }; }
   revalidatePath("/dashboard", "layout");
   return { error: null };
@@ -193,7 +197,7 @@ export async function updateScheduleWithOperations(
 /**
  * データベースのスケジュール関連データをリセットする
  * - schedulesテーブルを全件削除
- * - daily_reportsテーブルの昨日以前のデータを削除
+ * - ic_dailyテーブルの昨日以前のデータを削除
  */
 export async function resetScheduleData() {
   const supabase = createSupabaseServerClient();
@@ -208,12 +212,12 @@ export async function resetScheduleData() {
     return { error: truncateError };
   }
 
-  // 2. daily_reportsの過去データを削除
+  // 2. ic_dailyの過去データを削除
   // 'YYYY-MM-DD'形式で今日の日付を取得
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
   
   const { error: deleteError } = await supabase
-    .from('daily_reports')
+    .from('ic_daily')
     .delete()
     .lt('report_date', today); // report_dateが今日より前のものを削除
 
@@ -232,15 +236,15 @@ export async function resetScheduleData() {
 /**
  * 指定された日付の日次レポートのメモだけを更新（UPSERT）する
  * @param report_date - 対象の日付 'YYYY-MM-DD'
- * @param memo - 更新後のメモの内容
+ * @param maintenance_unit - 　
  */
-export async function updateDailyReportMemo(report_date: string, memo: string) {
+export async function updateDailyReportMemo(report_date: string, maintenance_unit: string) {
   const supabase = createSupabaseServerClient();
 
   const { error } = await supabase
-    .from('daily_reports')
+    .from('ic_daily')
     .upsert(
-      { report_date: report_date, memo: memo },
+      { report_date: report_date, maintenance_unit: maintenance_unit },
       { onConflict: 'report_date' } // report_dateが競合したらUPDATE
     );
 
@@ -273,4 +277,118 @@ export async function acknowledgeScheduleChange(scheduleId: number) {
 
   revalidatePath("/dashboard", "layout");
   return { error: null };
+}
+
+/**
+ * 最新の日付のtenkenkubunを取得する
+ * tenkenkubunがnullでないレコードの中で、最もreport_dateが新しいものを探す
+ */
+export async function getLatestTenkenkubun(): Promise<{ date: string, tenkenkubun: number } | null> {
+  const supabase = createSupabaseServerClient();
+  
+  const { data, error } = await supabase
+    .from('ic_daily')
+    .select('report_date, tenkenkubun')
+    .not('tenkenkubun', 'is', null) // tenkenkubunが設定されているもののみ対象
+    .order('report_date', { ascending: false }) // 日付の降順でソート
+    .limit(1) // 最初の1件を取得
+    .maybeSingle(); // 結果がなくてもエラーにしない
+
+  if (error) {
+    console.error("Error fetching latest tenkenkubun:", error.message);
+    return null;
+  }
+  
+  if (!data) {
+    return null; // データがない場合はnullを返す
+  }
+
+  // tenkenkubunがnumber型であることを保証する
+  const tenkenkubunNumber = Number(data.tenkenkubun);
+  if (isNaN(tenkenkubunNumber)) {
+    return null;
+  }
+
+  return { date: data.report_date, tenkenkubun: tenkenkubunNumber };
+}
+
+/**
+ * 掲載期限内のすべての掲示を取得する
+ */
+export async function getPosts(): Promise<Post[]> {
+  const supabase = createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false }); // 作成日時の降順（新しいものが上）
+
+  if (error) {
+    console.error("Error fetching posts:", error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * 掲示を一件追加または更新する
+ */
+export async function upsertPost(postData: PostInsert) {
+  const supabase = createSupabaseServerClient();
+  
+  const { error } = await supabase
+    .from('posts')
+    .upsert(postData)
+    .select();
+
+  if (error) {
+    console.error("Error upserting post:", error.message);
+    return { error };
+  }
+
+  revalidatePath('/home'); // ホーム画面のキャッシュをクリア
+  return { error: null };
+}
+
+/**
+ * 指定されたIDの掲示を削除する
+ */
+export async function deletePost(postId: number) {
+  const supabase = createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+  
+  if (error) {
+    console.error("Error deleting post:", error.message);
+    return { error };
+  }
+
+  revalidatePath('/home'); // ホーム画面のキャッシュをクリア
+  return { error: null };
+}
+
+/**
+ * is_attentionがtrueの掲示が存在するかどうかをチェックする
+ */
+export async function checkAttentionPosts(): Promise<boolean> {
+  const supabase = createSupabaseServerClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // ▼▼▼ ここからが修正箇所です ▼▼▼
+  const { count, error } = await supabase
+    .from('posts')
+    .select('*', { count: 'exact', head: true }) 
+    .eq('is_attention', true)
+
+  if (error) {
+    console.error("Error checking attention posts:", error.message);
+    return false;
+  }
+
+  return (count ?? 0) > 0;
+  // ▲▲▲ ここまで修正 ▲▲▲
 }

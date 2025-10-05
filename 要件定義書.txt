@@ -1,98 +1,118 @@
-要件定義書 Ver.4.1 (最終FIX版)：コンテナ船荷役予定管理アプリ
-1. アプリ概要
-アプリ名: コンテナ船荷役予定管理アプリ
-目的: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCからリアルタイムに最新の予定を確認・編集できる環境を構築する。
-利用者: 荷役機器を管理する港湾管理会社の担当者。
-2. 機能要件
-日付ごとの予定を表示・編集するメイン画面。初回表示の高速化のため、ページ本体はサーバーコンポーネントとしてデータ取得を行い、インタラクティブなUI部分はクライアントコンポーネント(DashboardClient)に分離したハイブリッドレンダリング方式を採用。
-ページナビゲーション (DateNavigator):
-表示日付の前日・翌日に移動するための矢印ボタンを配置。
-現在の日付をクリックするとカレンダー(Popover + Calendar)が表示され、任意の日付にジャンプできる。
-ページ遷移時、URLクエリパラメータに含まれるimportIdを維持する。
-データインポートページへのリンクボタンと、印刷プレビューを開くボタンを配置。
-ヘッダー情報エリア (DashboardHeader):
-選択された日付の「日付」「当直者」「サポート者」を表示。
-カード全体をクリックすると、当直者、風速、メモ情報を編集するためのモーダル(EditDailyReportDialog)が表示される。風速入力には、リアルタイムで反映される一括入力機能も備える。
-船舶図（ガントチャート）エリア (GanttChart):
-縦軸: 時間（0:00 〜 翌2:00）。
-横軸: ビット番号（33〜64）。画面幅に応じて動的に拡縮する（レスポンシブ対応）。
-ビット番号の上部に、クレーンの止め位置を示す静的なボックスを表示。これも横軸に連動して拡縮する。
-各船舶予定を矩形ブロックとして表示。船体が33ビット未満にかかる予定は、左端を33ビットに揃えて描画する。
-各ブロッククリックで予定編集モーダル(EditScheduleDialog)が開く。
-差分ハイライト: インポート直後は、以下のルールで色分け表示される。
-赤色: last_import_idがページの最新IDと異なる（今回のインポートに含まれなかった）「削除候補」の予定。
-黄色: last_import_idが最新で、かつchanged_fieldsにデータがある「内容が変更された」予定。
-荷役予定詳細テーブルエリア (ScheduleTable):
-表示順は、**第1キー: 岸壁 (昇順)、第2キー: 着岸時間 (昇順)**でDBから取得・表示。
-時刻表示: schedule_dateと着岸・離岸・荷役開始の日付が異なる場合、日付と時刻を2段で表示。
-各行クリックで予定編集モーダルが開く。ゴミ箱アイコンクリックで予定を削除。
-最終行に「新規作成行」を常設し、クリックで空の予定編集モーダルが開く。
-差分ハイライト: ガントチャートと同様のルールに加え、changed_fieldsに含まれるフィールドのセル単位でのハイライトも行う。
-予定編集モーダル (EditScheduleDialog):
-モード: 既存の予定をクリックした場合は「編集モード」、新規作成行をクリックした場合は「新規作成モード」で開く。
-編集対象: schedules（船舶情報）とcargo_operations（荷役作業）の両方を編集可能。
-UI/UX:
-日時入力は、カレンダーと15分刻みのセレクトボックスを組み合わせたカスタムコンポーネント(DateTimePicker)を採用。
-着岸位置（おもて・とも）はビット表記(33+15)で入力可能。
-荷役作業行は動的に追加・削除可能。「GC運転」の初期値は、船舶情報の「プランナ」から自動入力される。
-データ処理: 更新ボタン押下時、備考(remarks)を除く主要フィールドからdata_hashを再計算し、last_import_idを最新化、changed_fieldsをNULLにリセットしてDBに保存する。
-メモ編集エリア (MemoEdit):
-daily_reportsテーブルのmemoフィールドを表示・編集できる独立したコンポーネント。
-目的: 複数日分の船舶予定テキストを一括で解析し、DBに登録する。
-処理フロー:
-データ分割: テキストを「連絡先」行を区切りとして個別の船舶データブロックに分割。
-データ抽出・加工: 船名（行頭の数字や◆は除去）、着岸・離岸日時、着岸位置などを抽出。船の中心点からberth_numberを自動判定（45.5m未満:6, 57.5m未満:7, それ以上:8）。remarksを除く主要フィールドでdata_hashを計算。ユニークID(last_import_id)を生成。日またぎはレコード複製。
-DB登録 (高度なUPSERT): DB関数 upsert_schedules_with_check を呼び出し。
-新規: INSERT。changed_fieldsはNULL。
-既存 & data_hash異なる: UPDATEし、changed_fieldsに変更があったフィールド名をJSONBで保存。
-既存 & data_hash同じ: last_import_idのみUPDATEし、changed_fieldsをNULLにリセット。
-リダイレクト: 完了後、インポート作業日の翌日のダッシュボードにimportIdを付けてリダイレクトする。
-ダッシュボードの「印刷」ボタンから新しいタブで開かれる、A4縦向きに最適化されたページ。
-レイアウト: 通常画面の DashboardClient コンポーネントを、CSS transform: scale() を使ってA4用紙一枚に収まるように縮小して表示する。操作UI（日付ナビ、インポートボタン）は非表示にする。
-3. 非機能要件
-権限管理: 開発中は認証なし。
-レスポンシブデザイン: PC（通常画面）とA4用紙（印刷画面）に最適化。
-4. 開発・技術要件
-データベース: Supabase (PostgreSQL)
-技術スタック: Next.js (App Router), TypeScript, Tailwind CSS, Shadcn/ui, date-fns, date-fns-tz, crypto (Node.js)
-5. データベース設計 (Ver.3.1)
-5.1. schedules (船舶予定テーブル)
-schedule_dateとship_nameの組み合わせでユニーク制約を持つ。
-code
-SQL
+### **要件定義書 Ver.6.0 (複数地点拡張対応版)**
+
+#### **1. アプリ概要**
+
+*   **アプリ名**: コンテナ船荷役予定管理アプリ
+*   **目的**: 手作業で行われているコンテナ船の荷役予定作成・管理業務をデジタル化し、効率化を図る。関係者がPCやスマートフォンからリアルタイムに最新の予定を確認・編集できる環境を構築する。
+*   **利用者**: 荷役機器を管理する港湾管理会社の担当者。
+
+#### **2. 機能要件**
+
+##### **2.1. ホーム画面 (`/home`)**
+
+PCユーザー向けのトップページ。主要機能へのリンクメニューと、全社・全地点向けの掲示板機能を提供する。
+
+*   **機能リンク**:
+    *   明日の動静表 (IC) へ移動
+    *   船舶予定のインポート (IC) へ移動
+    *   外部リンク (PORT OF HAKATA)
+    *   使い方ガイド (PDF)
+*   **掲示板機能 (`PostsBoard`)**:
+    *   ホーム画面下部に縦1列で表示。
+    *   **表示**: `posts`テーブルから掲載期限内の掲示をすべて取得し、作成日時の降順で表示。`is_attention`フラグがtrueの投稿はメガホンアイコン付きで強調表示される。
+    *   **CRUD操作**: 新規作成・編集・削除が可能。操作は専用のモーダル(`EditPostDialog`)で行う。
+
+##### **2.2. PC版ダッシュボード (`/dashboard/[location]/[date]`)**
+※現在はまだ[location]のルーティング未作成。今後実装予定。
+
+地点(`location`)ごと、日付ごとの予定を表示・編集するメイン画面。初回表示の高速化のため、ページ本体はサーバーコンポーネントとしてデータ取得を行い、UI部分はクライアントコンポーネント(`DashboardClient`)に分離したハイブリッドレンダリング方式を採用。
+
+*   **ヘッダー情報エリア (`DashboardHeader`)**:
+    *   横長1列の4ブロック構成。通常時・印刷時でレイアウトが動的に変化。
+    *   **ブロック1 (タイトル)**: 地点名（例: 「IC」）を表示。印刷時のみ表示。
+    *   **ブロック2 (日付・当直)**: 日付、当直者、サポート者を表示。
+    *   **ブロック3 (風速・ミーティング)**: 上段に「ミーティング時間」「早出かわし」、下段に「風速テーブル」を表示。風速値に応じてセルが色分けされる。印刷時はミーティング/かわし非表示。
+    *   **ブロック4 (点検)**: 「点検予定」「終了点検」を表示。印刷時は終了点検非表示。
+    *   通常表示時、カード全体をクリックすると日次情報編集モーダル(`EditDailyReportDialog`)が表示される。
+*   **船舶図（ガントチャート）エリア (`GanttChart`)**:
+    *   地点ごとの設定(`constants.ts`)に基づき、縦軸（時間）・横軸（ビット番号）・クレーン止め位置を描画。
+    *   印刷時のみ、ガントチャート直下に隙間をあけて障害物チャート（BUSBAR, CB等）とビット番号が表示される。
+*   **荷役予定詳細テーブルエリア (`ScheduleTable`)**:
+    *   `G数` (`crane_count`)、`PILOT`/`TUG`（有/無）の情報を表示。
+*   **お知らせボタン**: `is_attention`がtrueの掲示がある場合のみ、ヘッダーに点滅する「お知らせがあります」ボタンを表示。クリックするとホーム画面の掲示板セクションへ別タブで遷移する。
+
+##### **2.3. スマートフォン版画面 (`/mobile/[location]/[date]`)**
+
+地点ごと・日付ごとの閲覧に特化した画面。
+
+*   **最終更新時刻**: `schedules`テーブルの最新の`updated_at`を日本時間でヘッダーに表示。
+*   **船間表示モード**: ヘッダーのボタンで「情報表示モード」と「船間表示モード」を切り替え。
+    *   **情報表示モード**: 船タップで詳細Popoverを表示。
+    *   **船間表示モード**: 2隻の船をタップすると、船間の距離（メートル、小数点以下なし）をトースト通知で表示。3隻目をタップすると、2隻目と3隻目の距離を表示。背景タップで選択解除。
+*   **モバイル用ガントチャート (`MobileGanttChart`)**:
+    *   **ズーム**: ピンチイン・アウト、ダブルタップでのリセット、ズームボタン（実装済みだが非表示中）による段階的なズームが可能。ズームは常に画面中央が基点となる。
+    *   **ズームロック**: Popover表示中は、意図しないページ全体のズームがJavaScriptによって無効化される。
+
+##### **2.4. 各種モーダル**
+
+*   **日次情報編集モーダル (`EditDailyReportDialog`)**:
+    *   `ic_daily`テーブルの全カラムを編集可能。
+    *   **終了点検**: `constants.ts`の定義に基づき、`C1`→`C2`→`D`のように区画名で変更内容を表示。
+*   **予定編集モーダル (`EditScheduleDialog`)**:
+    *   船舶情報セクションはアコーディオンで折りたたみ可能（初期状態は閉）。
+    *   `G数`, `PILOT`, `TUG`を編集可能。
+*   **掲示板編集モーダル (`EditPostDialog`)**:
+    *   掲示の新規作成・編集を行う。掲載期限はカレンダーで選択（必須、初期値は翌日）。
+
+#### **3. データベース設計 (Ver.6.0)**
+
+##### **3.1. `schedules` (船舶予定テーブル)**
+`location`カラムを追加し、地点ごとのデータを管理する。
+```sql
 CREATE TABLE public.schedules (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  location TEXT NOT NULL, --【新規】地点を識別 ('IC', 'Kashii'など)
   schedule_date DATE NOT NULL,
   ship_name TEXT NOT NULL,
   berth_number INT NOT NULL,
-  arrival_time TIMESTAMP NOT NULL,      -- タイムゾーンなし日時 (JSTとして扱う)
-  departure_time TIMESTAMP NOT NULL,    -- タイムゾーンなし日時 (JSTとして扱う)
+  arrival_time TIMESTAMP NOT NULL,
+  departure_time TIMESTAMP NOT NULL,
   arrival_side TEXT,
   bow_position_m NUMERIC NOT NULL,
   stern_position_m NUMERIC NOT NULL,
   planner_company TEXT,
-  remarks TEXT,                         -- 船の予定全体に対する、手動で編集される備考
-  data_hash TEXT,                       -- 備考を除く主要データの連結文字列。インポート時の差分検知に使用。
-  last_import_id TEXT,                  -- データの鮮度を示すID。インポートごとに更新される。
-  changed_fields JSONB,                 -- インポート時に変更があったフィールド名の配列。UIのハイライトに使用。
-  created_at TIMESTAMPTZ DEFAULT now()
+  remarks TEXT,
+  pilot BOOLEAN NOT NULL DEFAULT false,
+  tug BOOLEAN NOT NULL DEFAULT false,
+  crane_count INTEGER,
+  data_hash TEXT,
+  last_import_id TEXT,
+  changed_fields JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ --【新規】自動更新用の更新日時
 );
-5.2. cargo_operations (荷役予定テーブル)
-code
-SQL
+--【新規】パフォーマンス向上のための複合インデックス
+CREATE INDEX ON public.schedules (location, schedule_date);
+```
+
+##### **3.2. `cargo_operations` (荷役予定テーブル)**
+`schedules`とのリレーションに変更なし。
+```sql
 CREATE TABLE public.cargo_operations (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   schedule_id BIGINT NOT NULL REFERENCES public.schedules(id) ON DELETE CASCADE,
-  start_time TIMESTAMP,                 -- タイムゾーンなし日時
+  start_time TIMESTAMP,
   crane_names TEXT,
   container_count INT,
   stevedore_company TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-5.3. daily_reports (日次情報テーブル)
-code
-SQL
-CREATE TABLE public.daily_reports (
+```
+
+##### **3.3. `ic_daily` (IC地点 日次情報テーブル)**
+`daily_reports`から`ic_daily`に改名済み。
+```sql
+CREATE TABLE public.ic_daily (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   report_date DATE NOT NULL UNIQUE,
   primary_staff TEXT,
@@ -102,98 +122,226 @@ CREATE TABLE public.daily_reports (
   wind_speed_3 NUMERIC, wind_speed_4 NUMERIC,
   wind_speed_5 NUMERIC, wind_speed_6 NUMERIC,
   wind_speed_7 NUMERIC, wind_speed_8 NUMERIC,
-  memo TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  maintenance_unit TEXT,
+  tenkenkubun INTEGER,
+  meeting_time TIME WITHOUT TIME ZONE,
+  kawasi_time TIME WITHOUT TIME ZONE,
+  company TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+```
+
+##### **3.4. `posts` (掲示板テーブル)**
+ホーム画面での掲示板機能のために新設。
+```sql
+CREATE TABLE public.posts (
+  -- 主キー: 自動採番されるID
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+
+  -- 作成日時: タイムゾーン情報を含むタイムスタンプ。自動的に記録されます。
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- 差出人 (From): TEXT型 (文字列)
+  "from" TEXT,
+
+  -- 宛先 (To): TEXT型 (文字列)
+  "to" TEXT,
+  
+  -- 掲載期限: DATE型 (日付のみ)
+  -- この日を過ぎたら表示しない、などのロジックに使用できます。
+  expiration_date DATE,
+
+  -- 内容: TEXT型 (文字列)
+  content TEXT NOT NULL,
+
+  -- アテンションフラグ: BOOLEAN型 (true/false)
+  -- デフォルトはfalse(通常)に設定
+  is_attention BOOLEAN NOT NULL DEFAULT false
+);
+
+-- テーブルとカラムにコメントを追加 (後から管理しやすくするため推奨)
+COMMENT ON TABLE public.posts IS 'ホーム画面に表示する掲示板の投稿';
+COMMENT ON COLUMN public.posts."from" IS '差出人';
+COMMENT ON COLUMN public.posts."to" IS '宛先';
+COMMENT ON COLUMN public.posts.expiration_date IS 'この日を過ぎたら表示しないための掲載期限';
+COMMENT ON COLUMN public.posts.content IS '掲示内容の本文';
+COMMENT ON COLUMN public.posts.is_attention IS 'trueの場合、目立たせるためのフラグ';
+
 6. Supabase DB関数 (構成SQL)
-6.1. upsert_schedules_with_check (一括インポート用)
-役割: 受け取ったスケジュールデータの配列を元に、高度なUPSERT処理を行う。remarks と changed_fields を正しく処理する。
-code
-SQL
+### `upsert_schedules_with_check` DB関数 (最終版)
+
+```sql
+-- 役割: 受け取ったスケジュールデータの配列(jsonb)を元に、高度なUPSERT処理を行う。
+--       - 新規データはINSERTする。
+--       - 既存データ(location, schedule_date, ship_nameで特定)は、内容(data_hash)を比較してUPDATEする。
+--       - data_hashに差分があれば、どのフィールドが変更されたかを changed_fields に記録する。
+--       - data_hashに差分がなければ、last_import_id のみ更新し、changed_fields をリセットする。
 CREATE OR REPLACE FUNCTION public.upsert_schedules_with_check(schedules_data jsonb)
 RETURNS TABLE(updated_count integer, inserted_count integer)
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  new_schedule JSONB; existing_schedule RECORD; _updated_count INT := 0; _inserted_count INT := 0;
-  old_values TEXT[]; new_values TEXT[];
-  field_names TEXT[] := ARRAY['ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
-  changed_fields_array TEXT[]; i INT;
+  new_schedule JSONB; 
+  existing_schedule RECORD; 
+  _updated_count INT := 0; 
+  _inserted_count INT := 0;
+  old_values TEXT[]; 
+  new_values TEXT[];
+  --【重要】この配列の順番は、parser.tsでdata_hashを生成する際の順番と完全に一致させる必要がある
+  field_names TEXT[] := ARRAY['location', 'ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
+  changed_fields_array TEXT[]; 
+  i INT;
 BEGIN
+  -- 受け取ったJSON配列の各要素をループ処理
   FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data) LOOP
-    SELECT * INTO existing_schedule FROM public.schedules WHERE schedule_date = (new_schedule->>'schedule_date')::DATE AND ship_name = (new_schedule->>'ship_name');
+    --【変更点】検索条件に location を追加し、ユニークキーを3つにする
+    SELECT * INTO existing_schedule 
+    FROM public.schedules 
+    WHERE 
+      location = (new_schedule->>'location') AND
+      schedule_date = (new_schedule->>'schedule_date')::DATE AND 
+      ship_name = (new_schedule->>'ship_name');
     
+    -- 既存のレコードが見つからなかった場合: 新規INSERT
     IF existing_schedule IS NULL THEN
+      --【変更点】INSERT文のカラムリストとVALUESリストに location を追加
       INSERT INTO public.schedules (
-        ship_name, berth_number, arrival_time, departure_time, arrival_side,
+        location, ship_name, berth_number, arrival_time, departure_time, arrival_side,
         bow_position_m, stern_position_m, planner_company, schedule_date,
         data_hash, last_import_id, changed_fields, remarks
       ) VALUES (
-        new_schedule->>'ship_name', (new_schedule->>'berth_number')::INT, (new_schedule->>'arrival_time')::TIMESTAMP,
-        (new_schedule->>'departure_time')::TIMESTAMP, new_schedule->>'arrival_side', (new_schedule->>'bow_position_m')::NUMERIC,
-        (new_schedule->>'stern_position_m')::NUMERIC, new_schedule->>'planner_company', (new_schedule->>'schedule_date')::DATE,
-        new_schedule->>'data_hash', new_schedule->>'last_import_id', (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks'
+        new_schedule->>'location', new_schedule->>'ship_name', 
+        (new_schedule->>'berth_number')::INT, (new_schedule->>'arrival_time')::TIMESTAMP,
+        (new_schedule->>'departure_time')::TIMESTAMP, new_schedule->>'arrival_side', 
+        (new_schedule->>'bow_position_m')::NUMERIC, (new_schedule->>'stern_position_m')::NUMERIC, 
+        new_schedule->>'planner_company', (new_schedule->>'schedule_date')::DATE,
+        new_schedule->>'data_hash', new_schedule->>'last_import_id', 
+        (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks'
       );
       _inserted_count := _inserted_count + 1;
     ELSE
+      -- 既存のレコードが見つかった場合: UPDATE処理
+      -- data_hashを比較して、内容に変更があったか判定
       IF existing_schedule.data_hash IS DISTINCT FROM (new_schedule->>'data_hash') THEN
-        old_values := string_to_array(existing_schedule.data_hash, '|'); new_values := string_to_array(new_schedule->>'data_hash', '|'); changed_fields_array := ARRAY[]::TEXT[];
-        FOR i IN 1..array_length(field_names, 1) LOOP IF old_values[i] IS DISTINCT FROM new_values[i] THEN changed_fields_array := array_append(changed_fields_array, field_names[i]); END IF; END LOOP;
+        -- data_hashに差分あり: 変更内容を記録してUPDATE
+        old_values := string_to_array(existing_schedule.data_hash, '|'); 
+        new_values := string_to_array(new_schedule->>'data_hash', '|'); 
+        changed_fields_array := ARRAY[]::TEXT[];
+        -- field_names配列を元に、どのフィールドが変更されたかチェック
+        FOR i IN 1..array_length(field_names, 1) LOOP 
+          IF old_values[i] IS DISTINCT FROM new_values[i] THEN 
+            changed_fields_array := array_append(changed_fields_array, field_names[i]); 
+          END IF; 
+        END LOOP;
+        
+        --【変更点】UPDATE文のSET句に location を追加
         UPDATE public.schedules SET
-          arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, departure_time = (new_schedule->>'departure_time')::TIMESTAMP,
-          arrival_side = new_schedule->>'arrival_side', bow_position_m = (new_schedule->>'bow_position_m')::NUMERIC, stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
-          planner_company = new_schedule->>'planner_company', berth_number = (new_schedule->>'berth_number')::INT, remarks = new_schedule->>'remarks',
-          data_hash = new_schedule->>'data_hash', last_import_id = new_schedule->>'last_import_id',
+          location = new_schedule->>'location',
+          arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, 
+          departure_time = (new_schedule->>'departure_time')::TIMESTAMP,
+          arrival_side = new_schedule->>'arrival_side', 
+          bow_position_m = (new_schedule->>'bow_position_m')::NUMERIC, 
+          stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
+          planner_company = new_schedule->>'planner_company', 
+          berth_number = (new_schedule->>'berth_number')::INT, 
+          remarks = new_schedule->>'remarks',
+          data_hash = new_schedule->>'data_hash', 
+          last_import_id = new_schedule->>'last_import_id',
           changed_fields = CASE WHEN array_length(changed_fields_array, 1) > 0 THEN to_jsonb(changed_fields_array) ELSE NULL END
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       ELSE
+        -- data_hashに差分なし: last_import_idと備考のみ更新
         UPDATE public.schedules SET
           last_import_id = new_schedule->>'last_import_id',
           changed_fields = NULL,
-          remarks = new_schedule->>'remarks' -- 備考も更新対象に含める
+          remarks = new_schedule->>'remarks'
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       END IF;
     END IF;
   END LOOP;
+  -- 更新件数と新規作成件数を返す
   RETURN QUERY SELECT _updated_count, _inserted_count;
 END;
 $$;
-6.2. create_schedule_with_operations (手動での新規作成用)
-code
-SQL
+
+#### 1. `create_schedule_with_operations` (新規作成用) の修正版
+
+```sql
+-- 役割: 手動での新規スケジュール作成時に、schedulesテーブルとcargo_operationsテーブルにデータを追加するトランザクション関数。
 CREATE OR REPLACE FUNCTION public.create_schedule_with_operations(schedule_data jsonb, operations_data jsonb)
 RETURNS bigint LANGUAGE plpgsql AS $$
-DECLARE new_schedule_id bigint; op jsonb;
+DECLARE 
+  new_schedule_id bigint; 
+  op jsonb;
 BEGIN
-  INSERT INTO public.schedules (ship_name, berth_number, arrival_time, departure_time, arrival_side, bow_position_m, stern_position_m, planner_company, schedule_date, data_hash, last_import_id, changed_fields, remarks)
-  VALUES (schedule_data->>'ship_name', (schedule_data->>'berth_number')::INT, (schedule_data->>'arrival_time')::TIMESTAMP, (schedule_data->>'departure_time')::TIMESTAMP, schedule_data->>'arrival_side', (schedule_data->>'bow_position_m')::NUMERIC, (schedule_data->>'stern_position_m')::NUMERIC, schedule_data->>'planner_company', (schedule_data->>'schedule_date')::DATE, schedule_data->>'data_hash', schedule_data->>'last_import_id', (schedule_data->'changed_fields')::JSONB, schedule_data->>'remarks')
+  --【変更点】INSERT文のカラムリストとVALUESリストに "location" を追加
+  INSERT INTO public.schedules (
+    location, ship_name, berth_number, arrival_time, departure_time, arrival_side, 
+    bow_position_m, stern_position_m, planner_company, schedule_date, 
+    data_hash, last_import_id, changed_fields, remarks,
+    pilot, tug, crane_count
+  )
+  VALUES (
+    schedule_data->>'location', -- この行を追加
+    schedule_data->>'ship_name', (schedule_data->>'berth_number')::INT, 
+    (schedule_data->>'arrival_time')::TIMESTAMP, (schedule_data->>'departure_time')::TIMESTAMP, 
+    schedule_data->>'arrival_side', (schedule_data->>'bow_position_m')::NUMERIC, 
+    (schedule_data->>'stern_position_m')::NUMERIC, schedule_data->>'planner_company', 
+    (schedule_data->>'schedule_date')::DATE, schedule_data->>'data_hash', 
+    schedule_data->>'last_import_id', (schedule_data->'changed_fields')::JSONB, 
+    schedule_data->>'remarks',
+    (schedule_data->>'pilot')::BOOLEAN, (schedule_data->>'tug')::BOOLEAN,
+    (schedule_data->>'crane_count')::INTEGER
+  )
   RETURNING id INTO new_schedule_id;
+  
+  -- 荷役作業(cargo_operations)の処理 (変更なし)
   IF operations_data IS NOT NULL AND jsonb_array_length(operations_data) > 0 THEN
     FOR op IN SELECT * FROM jsonb_array_elements(operations_data) LOOP
       INSERT INTO public.cargo_operations (schedule_id, start_time, crane_names, container_count, stevedore_company)
       VALUES (new_schedule_id, (op->>'start_time')::TIMESTAMP, op->>'crane_names', (op->>'container_count')::INT, op->>'stevedore_company');
     END LOOP;
   END IF;
+  
   RETURN new_schedule_id;
 END;
 $$;
-6.3. update_schedule_with_operations (手動での更新用)
-code
-SQL
+```
+
+#### 2. `update_schedule_with_operations` (手動更新用) の修正版
+
+```sql
+-- 役割: 手動での既存スケジュール更新時に、schedulesテーブルとcargo_operationsテーブルのデータを更新するトランザクション関数。
 CREATE OR REPLACE FUNCTION public.update_schedule_with_operations(p_schedule_id bigint, schedule_data jsonb, operations_data jsonb)
 RETURNS void LANGUAGE plpgsql AS $$
-DECLARE op jsonb;
+DECLARE 
+  op jsonb;
 BEGIN
+  --【変更点】UPDATE文のSET句に "location" を追加
   UPDATE public.schedules SET
-    ship_name = schedule_data->>'ship_name', arrival_time = (schedule_data->>'arrival_time')::TIMESTAMP, departure_time = (schedule_data->>'departure_time')::TIMESTAMP,
-    arrival_side = schedule_data->>'arrival_side', bow_position_m = (schedule_data->>'bow_position_m')::NUMERIC, stern_position_m = (schedule_data->>'stern_position_m')::NUMERIC,
-    planner_company = schedule_data->>'planner_company', berth_number = (schedule_data->>'berth_number')::INT,
+    location = schedule_data->>'location', -- この行を追加
+    ship_name = schedule_data->>'ship_name', 
+    arrival_time = (schedule_data->>'arrival_time')::TIMESTAMP, 
+    departure_time = (schedule_data->>'departure_time')::TIMESTAMP,
+    arrival_side = schedule_data->>'arrival_side', 
+    bow_position_m = (schedule_data->>'bow_position_m')::NUMERIC, 
+    stern_position_m = (schedule_data->>'stern_position_m')::NUMERIC,
+    planner_company = schedule_data->>'planner_company', 
+    berth_number = (schedule_data->>'berth_number')::INT, 
     remarks = schedule_data->>'remarks',
-    data_hash = schedule_data->>'data_hash', last_import_id = schedule_data->>'last_import_id', changed_fields = NULL
+    pilot = (schedule_data->>'pilot')::BOOLEAN,
+    tug = (schedule_data->>'tug')::BOOLEAN,
+    crane_count = (schedule_data->>'crane_count')::INTEGER,
+    data_hash = schedule_data->>'data_hash', 
+    last_import_id = schedule_data->>'last_import_id', 
+    changed_fields = NULL
   WHERE id = p_schedule_id;
+
+  -- 荷役作業(cargo_operations)の処理 (変更なし)
   DELETE FROM public.cargo_operations WHERE schedule_id = p_schedule_id;
+  
   IF operations_data IS NOT NULL AND jsonb_array_length(operations_data) > 0 THEN
     FOR op IN SELECT * FROM jsonb_array_elements(operations_data) LOOP
       INSERT INTO public.cargo_operations (schedule_id, start_time, crane_names, container_count, stevedore_company)
@@ -202,15 +350,8 @@ BEGIN
   END IF;
 END;
 $$;
-6.4. truncate_schedules_and_dependencies (データリセット用)
-code
-SQL
-CREATE OR REPLACE FUNCTION public.truncate_schedules_and_dependencies()
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  TRUNCATE TABLE public.schedules RESTART IDENTITY CASCADE;
-END;
-$$;
+
+7. プロジェクトディレクトリ構成と各ファイルの概要 (Ver.5.0)
 7. 環境変数設定
 プロジェクトのルートディレクトリに.env.localファイルを作成し、以下の内容を記述する。値はSupabaseプロジェクトのダッシュボード（Settings > API）から取得する。
 code
@@ -313,3 +454,62 @@ middleware.ts: 【サーバーエッジ】すべてのリクエストを監視�
 .env.local: Supabase接続情報などの環境変数を定義するファイル (Git管理外)。
 next.config.js: Next.jsのプロジェクト設定ファイル。PWAの設定もここに含まれる。
 package.json: プロジェクトの依存関係とスクリプトを定義するファイル。
+/src/components/ui/TimePicker.tsx: 【クライアント・新規】Selectコンポーネントをベースにした、5:00-9:00の30分刻みのカスタム時刻ピッカー。
+/src/components/CraneLimitChart.tsx: 【クライアント・変更】印刷ページで、クレーンの極限位置情報テーブルと、ミーティング・終了点検テーブルを表示する複合コンポーネント。
+/src/components/DashboardHeader.tsx: ヘッダーのレイアウトを全面的に刷新。通常時・印刷時で共通化されたUI。
+/src/components/EditDailyReportDialog.tsx: 終了点検、ミーティング時間、会社など、ic_dailyテーブルの全カラムを編集する機能を追加。
+/src/components/EditScheduleDialog.tsx: pilot, tug, crane_countを編集するUIを追加。船舶情報セクションはアコーディオンで折りたたみ可能。
+/src/components/GanttChart.tsx: 印刷時に、自身のコンポーネント下部に障害物チャート（BUSBAR, CB）を描画する機能が統合された。
+/src/components/MobileGanttChart.tsx: ズーム機能がピンチイン・アウト、ボタン操作、ダブルタップリセットに変更。画面中央基点のズームを実現。
+/src/lib/constants.ts: TIME_OPTIONS_30_MINUTES, tenkenkubunなどの定数が追加された。
+/src/lib/supabase/actions.ts: getLatestTenkenkubunサーバーアクションが追加された。
+*   **新規・変更ファイル概要**:
+    *   `/src/app/home/HomeClient.tsx`: 【新規】ホーム画面のUIとインタラクションを担うクライアントコンポーネント。
+    *   `/src/app/home/page.tsx`: 【変更】サーバーコンポーネント化。データ取得を行い`HomeClient`に渡す役割に専念。
+    *   `/src/components/PostsBoard.tsx`: 【新規】掲示板の表示と操作（CRUD）を行うクライアントコンポーネント。
+    *   `/src/components/EditPostDialog.tsx`: 【新規】掲示の作成・編集用モーダル。
+    *   `/src/components/ui/TimePicker.tsx`: 【新規】時刻選択用のカスタムUIコンポーネント。
+    *   `/src/lib/supabase/actions.ts`: `posts`テーブル用のCRUDサーバーアクション (`getPosts`, `upsertPost`, `deletePost`) と、`checkAttentionPosts`が追加された。
+
+#### **6. 将来の拡張計画: 「香椎」地点への対応方針**
+
+本アプリケーションを「香椎(kc)」地点に対応させるための具体的なステップ。
+
+1.  **URL構造の変更**:
+    *   Next.jsの動的ルーティング機能を利用し、URL構造を`/[location]/[date]`形式に統一する。
+    *   `/app/dashboard/[date]` -> `/app/dashboard/[location]/[date]`
+    *   `/app/mobile/[date]` -> `/app/mobile/[location]/[date]`
+    *   `/app/print/[date]` -> `/app/print/[location]/[date]`
+    *   これにより、`page.tsx`は各1つのままで、`params.location`から現在の地点名を取得できるようになる。
+
+2.  **データベースの準備**:
+    *   `kc_daily`テーブルを作成する。`ic_daily`とカラムが異なる場合は、それに合わせて定義する。
+    *   `schedules`テーブルには既に`location`カラムがあるため、香椎のデータは`location = 'Kashii'`としてINSERT/UPDATEする。
+
+3.  **定数の追加 (`constants.ts`)**:
+    *   `LOCATION_CONFIG`オブジェクトに`Kashii`のエントリを追加する。ここには、香椎のビット番号範囲、クレーン止め位置、障害物などの固有情報をすべて定義する。
+        ```typescript
+        export const LOCATION_CONFIG = {
+          IC: { ... },
+          Kashii: {
+            CHART_START_BIT: 1, // 例
+            CHART_END_BIT: 32,  // 例
+            craneStops: [ /* 香椎用の定義 */ ],
+            obstacles: [ /* 香椎用の定義 */ ],
+          }
+        };
+        ```
+
+4.  **サーバーアクションの修正 (`actions.ts`)**:
+    *   `getSchedulesByDate(date)` -> `getSchedulesByDate(date, location)`のように、`location`を引数に追加する。内部のSupabaseクエリに`.eq('location', location)`を追加する。
+    *   `getDailyReportByDate(date)` -> `getDailyReportByDate(date, location)`のように変更する。内部で`location`の値に応じて`ic_daily`または`kc_daily`からSELECTするように分岐ロジックを追加する。
+    *   同様に`upsertDailyReport`なども`location`を引数に取るように修正する。
+
+5.  **コンポーネントの汎用化**:
+    *   `DashboardClient`, `GanttChart`, `MobileGanttChart`などの主要コンポーネントが、親から`location` propを受け取るように修正する。
+    *   `GanttChart`などの描画コンポーネントは、propsで受け取った`location`を使い、`LOCATION_CONFIG[location]`から適切な設定を読み込んで描画する。
+    *   `DashboardHeader`なども、`location`に応じてタイトル（「IC」など）を動的に表示するように修正する。
+
+6.  **インポート機能の修正 (`parser.ts`)**:
+    *   インポート画面で、どの地点のデータとしてインポートするかを選択するUI（例: ラジオボタン）を追加する。
+    *   `parseMultipleSchedules`関数が`location`を受け取り、生成する`ScheduleDataForDB`オブジェクトに`location: 'Kashii'`のように含めるように修正する。

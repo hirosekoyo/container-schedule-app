@@ -5,12 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"; // Collapsibleをインポート
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { parseMultipleSchedules } from '@/lib/parser';
 import { importMultipleSchedules, resetScheduleData } from '@/lib/supabase/actions';
 import { useRouter } from 'next/navigation';
 import React, { useState, useTransition } from 'react';
-import { AlertCircle, ClipboardPaste, Upload, ChevronRight, CheckCircle2, ArrowLeft } from "lucide-react"; // アイコンを追加
+import { AlertCircle, ClipboardPaste, Upload, ChevronRight, CheckCircle2, ArrowLeft } from "lucide-react";
 
 /**
  * Dateオブジェクトを 'YYYY-MM-DD' 形式の文字列に変換するヘルパー関数
@@ -37,7 +37,10 @@ export default function ImportPage() {
     setMessage(null);
     const importId = `imp-${Date.now()}`;
     const currentYear = new Date().getFullYear();
-    const parsedData = parseMultipleSchedules(textInput, currentYear, importId);
+    
+    // ▼▼▼ ここを修正 ▼▼▼
+    const parsedData = parseMultipleSchedules(textInput, currentYear, importId, 'IC');
+    // ▲▲▲ ここまで修正 ▲▲▲
 
     if (parsedData.length === 0) {
       setMessage({ type: 'error', text: '解析できるデータがありませんでした。テキストの形式を確認してください。' });

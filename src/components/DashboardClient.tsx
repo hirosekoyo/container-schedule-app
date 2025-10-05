@@ -9,8 +9,8 @@ import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
-import { Printer } from 'lucide-react';
-import { MemoEdit } from '@/components/MemoEdit';
+// ▼▼▼ BellRing アイコンをインポート ▼▼▼
+import { Printer, Home, BellRing } from 'lucide-react';
 
 interface DashboardClientProps {
   initialReport: DailyReport | null;
@@ -18,16 +18,18 @@ interface DashboardClientProps {
   initialLatestImportId: string | null;
   date: string;
   currentImportId?: string;
-  isPrintView?: boolean; // 印刷モード用のpropsを追加
+  isPrintView?: boolean;
+  hasAttentionPosts: boolean; // 新しいpropを受け取る
 }
 
 export function DashboardClient({
-  initialReport,
+    initialReport,
   initialSchedules,
   initialLatestImportId,
   date,
   currentImportId,
-  isPrintView = false, // デフォルトはfalse
+  isPrintView = false,
+  hasAttentionPosts, // 新しいpropを受け取る
 }: DashboardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
@@ -40,17 +42,31 @@ export function DashboardClient({
   };
 
   return (
-    // ルート要素に `print-content` クラスを追加
     <div className={`flex flex-1 flex-col gap-4 md:gap-8 ${isPrintView ? 'print-content' : ''}`}>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">船舶動静表-IC</h1>
-        {/* 印刷時ではない場合のみ、ナビゲーションボタンを表示 */}
         {!isPrintView && (
           <div className="flex items-center gap-4">
+            {/* ▼▼▼ お知らせボタンを条件付きで表示 ▼▼▼ */}
+            {hasAttentionPosts && (
+              <Button asChild variant="destructive" className="animate-pulse">
+                <Link href="/home#board" target="_blank" rel="noopener noreferrer">
+                  <BellRing className="mr-2 h-4 w-4" />
+                  お知らせがあります
+                </Link>
+              </Button>
+            )}
+
+            <Button asChild variant="outline" size="icon">
+              <Link href="/home" aria-label="ホームに戻る">
+                <Home className="h-4 w-4" />
+              </Link>
+            </Button>
+            
             <DateNavigator 
              currentDate={date} 
              importId={currentImportId} 
-             basePath="/dashboard" // basePathを指定
+             basePath="/dashboard"
             />
             <Button variant="outline" onClick={() => window.open(`/print/${date}`, '_blank')}>
               <Printer className="mr-2 h-4 w-4" /> 印刷
@@ -71,6 +87,7 @@ export function DashboardClient({
             latestImportId={initialLatestImportId}
             onScheduleClick={handleScheduleClick}
             isPrintView={isPrintView}
+            report={initialReport}
           />
         </div>
       </div>
@@ -84,13 +101,7 @@ export function DashboardClient({
           isPrintView={isPrintView}
         />
       </div>
-
-      <MemoEdit 
-        initialMemo={initialReport?.memo || null}
-        reportDate={date}
-      />
       
-      {/* 印刷時ではない場合のみ、編集モーダルをレンダリング */}
       {!isPrintView && (
         <EditScheduleDialog
           schedule={selectedSchedule}
