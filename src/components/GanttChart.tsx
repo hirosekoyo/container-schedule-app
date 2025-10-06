@@ -137,11 +137,25 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
               const heightPercent = ((data.end - data.start) / TOTAL_CHART_HOURS) * 100;
               return ( <div key={`wind-bg-${index}`} className={`absolute w-full ${colorClass}`} style={{ top: `${topPercent}%`, height: `${heightPercent}%` }} /> );
             })}
+            {/* ▼▼▼ 変更点1: 水平線に print: モディファイアを追加 ▼▼▼ */}
             {hourLines.map((hour) => ( 
-              <div key={`h-line-${hour}`} className={`absolute w-full border-t ${hour % 3 === 0 ? 'border-gray-400' : 'border-gray-200'}`} style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} /> 
+              <div 
+                key={`h-line-${hour}`} 
+                className={`absolute w-full border-t ${
+                  hour % 3 === 0 
+                  ? 'border-gray-400 print:border-gray-500' 
+                  : 'border-gray-200 print:border-gray-300'
+                }`} 
+                style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
+              /> 
             ))}
+            {/* ▼▼▼ 変更点2: 垂直線に print: モディファイアを追加 ▼▼▼ */}
             {bitLabels.map((_, i) => ( 
-              <div key={`v-line-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * dynamicBitWidth }} /> 
+              <div 
+                key={`v-line-${i}`} 
+                className="absolute h-full border-l border-gray-200 print:border-gray-300" 
+                style={{ left: i * dynamicBitWidth }} 
+              /> 
             ))}
           </div>
           {graphAreaWidth > 0 && schedules.map((schedule) => {
@@ -186,7 +200,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
           {isPrintView && (
             <>
               <div className="flex items-center justify-center text-sm font-semibold text-gray-700 h-[3rem] absolute -top-[3rem] w-full">風速</div>
-              {timeLabels.map(({ hour }) => ( <div key={`extended-hline-${hour}`} className="absolute w-full border-t border-gray-400" style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
+              {/* ▼▼▼ 変更点3: 右側風速エリアの水平線にも print: を追加 ▼▼▼ */}
+              {timeLabels.map(({ hour }) => ( 
+                <div 
+                  key={`extended-hline-${hour}`} 
+                  className="absolute w-full border-t border-gray-400 print:border-gray-500" 
+                  style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
+                /> 
+              ))}
               {report && windData.map((data) => {
                 const speed = data.speed;
                 if (speed == null) return null;
@@ -205,7 +226,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
 
       {/* --- 下部チャートエリア --- */}
       {isPrintView && (
-        // ▼▼▼ 変更点: mt-0.5 -> mt-1 に変更 ▼▼▼
         <div className="flex-shrink-0 mt-1.5" style={{ height: '0.7cm' }}>
           <div className="grid h-full w-full" style={{ gridTemplateColumns: '2rem 1fr 3.5rem', gridTemplateRows: '1rem 1fr' }}>
             {/* --- 上部ビット番号エリア --- */}
@@ -221,11 +241,16 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
 
             {/* --- チャート描画エリア --- */}
             <div></div>
-            {/* ▼▼▼ 変更点: border-y-2 border-gray-400 を削除 ▼▼▼ */}
             <div className="relative h-full w-full overflow-hidden">
                 <div className="absolute inset-0">
-                  {/* ▼▼▼ 変更点3: グリッド線の描画ロジックを上部と統一 ▼▼▼ */}
-                  {bitLabels.map((_, i) => (<div key={`v-line-bottom-${i}`} className="absolute h-full border-l border-gray-200" style={{ left: i * dynamicBitWidth }} />))}
+                  {/* ▼▼▼ 変更点4: 下部チャートの垂直線にも print: を追加 ▼▼▼ */}
+                  {bitLabels.map((_, i) => (
+                    <div 
+                      key={`v-line-bottom-${i}`} 
+                      className="absolute h-full border-l border-gray-200 print:border-gray-300" 
+                      style={{ left: i * dynamicBitWidth }} 
+                    />
+                  ))}
                 </div>
                 {graphAreaWidth > 0 && (obstacles.map((obstacle, i) => {
                     const left = (obstacle.start - CHART_START_BIT) * dynamicBitWidth;
