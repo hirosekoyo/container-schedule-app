@@ -137,23 +137,53 @@
 /* 3時間ごとの太い水平線 */
 .print-gantt-chart .hour-line-major {
   border-color: #525252;
-  border-top-width: 2px; /* 太さを指定 */
+  border-top-width: 1px; /* 太さを指定 */
 }
 
 /* 1時間ごとの細い水平線 */
 .print-gantt-chart .hour-line-minor {
-  border-color: #7a7a7a;
+  border-color: #c4c4c4;
   border-top-width: 1px; /* 太さを指定 (細くする) */
 }
 
 /* 垂直線 (上部・下部共通) */
 .print-gantt-chart .bit-line {
-  border-color: #7a7a7a;
+  border-color: #c4c4c4;
   border-left-width: 1px; /* 太さを指定 (細くする) */
 }
 
 /* 右側風速エリアの水平線 */
 .print-gantt-chart .wind-hour-line {
   border-color: #525252;
-  border-top-width: 2px; /* 太さを指定 */
+  border-top-width: 1px; /* 太さを指定 */
+}
+
+/* =================================== */
+/* CraneLimitChart Styles for Printing */
+/* =================================== */
+
+/* テーブルの外枠の色を指定 */
+.print-crane-limit-chart table {
+  border: 1px solid #525252 !important;
+}
+
+/* すべてのセル(th, td)の罫線色を指定 */
+.print-crane-limit-chart th,
+.print-crane-limit-chart td {
+  border: 1px solid #525252 !important;
+}
+
+/* =================================== */
+/* DashboardHeader Styles for Printing */
+/* =================================== */
+
+/* テーブルの外枠の色を指定 */
+.print-dashboard-header table {
+  border: 1px solid #525252 !important;
+}
+
+/* すべてのセル(th, td)の罫線色を指定 */
+.print-dashboard-header th,
+.print-dashboard-header td {
+  border: 1px solid #525252 !important;
 }

@@ -52,7 +52,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
       <TableBody><TableRow><TableHead className={`text-center font-semibold border-r ${multiRowPadding} bg-gray-50`}>風速</TableHead>{windSpeeds.map(ws => <TableCell key={ws.label} className={`text-center font-semibold border-r ${multiRowPadding} ${getWindColorClass(ws.value)}`}>{ws.value ?? '-'}</TableCell>)}</TableRow></TableBody>
     </Table>
   );
-
   const TenkenYoteiTable = (
     <Table className={`border h-full ${fontSizeClass}`}>
       <TableBody><TableRow><TableHead className={`text-center font-semibold border-r w-[15%] ${singleRowPadding} bg-gray-50`}>点検予定</TableHead><TableCell className={`px-2 font-semibold ${singleRowPadding}`}>{report?.maintenance_unit || '-'}</TableCell></TableRow></TableBody>
@@ -74,10 +73,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
 
   return (
     <>
-      {/* ▼▼▼ 変更点2: isPrintViewに応じてJSX構造全体を切り替え ▼▼▼ */}
       {isPrintView ? (
         // --- 印刷表示用のレイアウト ---
-        <div className={`grid gap-2 font-sans items-stretch grid-cols-[6%_20%_35%_1fr]`}>
+        // ▼▼▼ 修正点: 印刷時用の親クラスを追加 ▼▼▼
+        <div className={`print-dashboard-header grid gap-2 font-sans items-stretch grid-cols-[6%_20%_35%_1fr]`}>
           <div className="flex items-center justify-center p-2">
             <div className={`flex items-center justify-center w-full h-full rounded-md bg-gray-200`}><h1 className={`font-bold text-2xl`}>IC</h1></div>
           </div>

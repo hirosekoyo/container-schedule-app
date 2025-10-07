@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react'; // 不要なフックを削除
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DailyReport } from '@/lib/supabase/actions';
-// ▼▼▼ 変更点1: tenkenkubunをインポート ▼▼▼
 import { tenkenkubun } from '@/lib/constants';
 
 interface CraneLimitChartProps {
@@ -14,7 +13,6 @@ interface CraneLimitChartProps {
 
 const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, printWidth, report }) => {
 
-    // ▼▼▼ 変更点2: Headerから表示用データの準備ロジックを移植 ▼▼▼
     const tenkenData = report?.tenkenkubun ? tenkenkubun[report.tenkenkubun.toString()] : null;
     const tenkenDisplayValue = tenkenData ? `区画: ${tenkenData[0]} / RTG: ${tenkenData[1]}` : '-';
     const meetingDisplayValue = report?.meeting_time ? report.meeting_time.slice(0, 5) : '-';
@@ -32,7 +30,8 @@ const CraneLimitChart: React.FC<CraneLimitChartProps> = ({ isPrintView = false, 
     ];
 
     return (
-        <div>
+        // ▼▼▼ 修正点: 印刷時用の親クラスを追加 ▼▼▼
+        <div className="print-crane-limit-chart">
             {/* --- テーブル部分 --- */}
             <div className="flex gap-2 items-stretch">
                 {/* --- 左側カラム --- */}
