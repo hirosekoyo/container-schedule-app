@@ -134,22 +134,26 @@
 /* GanttChart Styles for Printing      */
 /* =================================== */
 
-/* 3時間ごとの太い水平線 (gray-500相当) */
+/* 3時間ごとの太い水平線 */
 .print-gantt-chart .hour-line-major {
   border-color: #525252;
+  border-top-width: 2px; /* 太さを指定 */
 }
 
-/* 1時間ごとの細い水平線 (gray-300相当) */
+/* 1時間ごとの細い水平線 */
 .print-gantt-chart .hour-line-minor {
   border-color: #7a7a7a;
+  border-top-width: 1px; /* 太さを指定 (細くする) */
 }
 
-/* 垂直線 (上部・下部共通) (gray-300相当) */
+/* 垂直線 (上部・下部共通) */
 .print-gantt-chart .bit-line {
   border-color: #7a7a7a;
+  border-left-width: 1px; /* 太さを指定 (細くする) */
 }
 
-/* 右側風速エリアの水平線 (gray-500相当) */
+/* 右側風速エリアの水平線 */
 .print-gantt-chart .wind-hour-line {
   border-color: #525252;
+  border-top-width: 2px; /* 太さを指定 */
 }
