@@ -104,7 +104,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
   ] : [];
 
   return (
-    <div className="h-full w-full flex flex-col font-sans">
+    // ▼▼▼ 修正点1: 印刷時用の親クラスを追加 ▼▼▼
+    <div className={`h-full w-full flex flex-col font-sans ${isPrintView ? 'print-gantt-chart' : ''}`}>
       {/* --- 上部ガントチャートエリア --- */}
       <div className="flex-grow grid" style={{ gridTemplateColumns: '2rem 1fr 3.5rem', gridTemplateRows: '3rem 1fr' }}>
         <div></div>
@@ -141,19 +142,19 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             {hourLines.map((hour) => ( 
               <div 
                 key={`h-line-${hour}`} 
-                className={`absolute w-full border-t ${
+                className={`hour-line absolute w-full border-t ${
                   hour % 3 === 0 
-                  ? 'border-gray-400 print:border-gray-500' 
-                  : 'border-gray-200 print:border-gray-300'
+                  ? 'border-gray-400 hour-line-major' 
+                  : 'border-gray-200 hour-line-minor'
                 }`} 
                 style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
               /> 
             ))}
-            {/* ▼▼▼ 変更点2: 垂直線に print: モディファイアを追加 ▼▼▼ */}
+            {/* ▼▼▼ 修正点3: 垂直線からprint:を削除し、識別用クラスを追加 ▼▼▼ */}
             {bitLabels.map((_, i) => ( 
               <div 
                 key={`v-line-${i}`} 
-                className="absolute h-full border-l border-gray-200 print:border-gray-300" 
+                className="bit-line absolute h-full border-l border-gray-200" 
                 style={{ left: i * dynamicBitWidth }} 
               /> 
             ))}
@@ -200,11 +201,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
           {isPrintView && (
             <>
               <div className="flex items-center justify-center text-sm font-semibold text-gray-700 h-[3rem] absolute -top-[3rem] w-full">風速</div>
-              {/* ▼▼▼ 変更点3: 右側風速エリアの水平線にも print: を追加 ▼▼▼ */}
+              {/* ▼▼▼ 修正点4: 右側風速エリアの水平線からprint:を削除し、識別用クラスを追加 ▼▼▼ */}
               {timeLabels.map(({ hour }) => ( 
                 <div 
                   key={`extended-hline-${hour}`} 
-                  className="absolute w-full border-t border-gray-400 print:border-gray-500" 
+                  className="wind-hour-line absolute w-full border-t border-gray-400" 
                   style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
                 /> 
               ))}
@@ -243,11 +244,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             <div></div>
             <div className="relative h-full w-full overflow-hidden">
                 <div className="absolute inset-0">
-                  {/* ▼▼▼ 変更点4: 下部チャートの垂直線にも print: を追加 ▼▼▼ */}
+                  {/* ▼▼▼ 修正点5: 下部チャートの垂直線にも識別用クラスを追加 ▼▼▼ */}
                   {bitLabels.map((_, i) => (
                     <div 
                       key={`v-line-bottom-${i}`} 
-                      className="absolute h-full border-l border-gray-200 print:border-gray-300" 
+                      className="bit-line absolute h-full border-l border-gray-200" 
                       style={{ left: i * dynamicBitWidth }} 
                     />
                   ))}

@@ -59,24 +59,16 @@
   table-layout: fixed;
 }
 .print-table th, .print-table td {
-  padding: 0px 0px;
-  font-size: 6pt;
-  vertical-align: top;
-  height: 1rem; /* h-4 に相当 */
-  line-height: 1.1; /* 2段ヘッダーの文字が詰まりすぎないように調整 */
-  border: 1px solid #ccc;
-}
-.print-table th, .print-table td {
   padding: 4px 2px;
+  font-size: 6pt;
   vertical-align: middle;
-  border-right: 1px solid #ccc;
-  text-align: center; /* デフォルトを中央揃えに */
+  height: 1rem;
+  line-height: 1.1;
+  border: 1px solid #525252;/* 荷役予定テーブルの罫線 */
+  text-align: center;
 }
 .print-table th {
   font-weight: 600; /* ヘッダーの文字を太く */
-}
-.print-table th:last-child, .print-table td:last-child {
-  border-right: none;
 }
 
 /* 船名と備考列だけ左寄せに上書き */
@@ -137,3 +129,27 @@
 }
 
 /* ▲▲▲ 半分目安ここまで ▲▲▲ */
+
+/* =================================== */
+/* GanttChart Styles for Printing      */
+/* =================================== */
+
+/* 3時間ごとの太い水平線 (gray-500相当) */
+.print-gantt-chart .hour-line-major {
+  border-color: #525252;
+}
+
+/* 1時間ごとの細い水平線 (gray-300相当) */
+.print-gantt-chart .hour-line-minor {
+  border-color: #7a7a7a;
+}
+
+/* 垂直線 (上部・下部共通) (gray-300相当) */
+.print-gantt-chart .bit-line {
+  border-color: #7a7a7a;
+}
+
+/* 右側風速エリアの水平線 (gray-500相当) */
+.print-gantt-chart .wind-hour-line {
+  border-color: #525252;
+}
