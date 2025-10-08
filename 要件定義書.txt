@@ -176,6 +176,7 @@ COMMENT ON COLUMN public.posts.is_attention IS 'trueの場合、目立たせる�
 --       - 既存データ(location, schedule_date, ship_nameで特定)は、内容(data_hash)を比較してUPDATEする。
 --       - data_hashに差分があれば、どのフィールドが変更されたかを changed_fields に記録する。
 --       - data_hashに差分がなければ、last_import_id のみ更新し、changed_fields をリセットする。
+--       - remarksカラムは、インポートデータに値がある場合のみ更新し、それ以外は既存の値を維持する。
 CREATE OR REPLACE FUNCTION public.upsert_schedules_with_check(schedules_data jsonb)
 RETURNS TABLE(updated_count integer, inserted_count integer)
 LANGUAGE plpgsql
@@ -187,14 +188,11 @@ DECLARE
   _inserted_count INT := 0;
   old_values TEXT[]; 
   new_values TEXT[];
-  --【重要】この配列の順番は、parser.tsでdata_hashを生成する際の順番と完全に一致させる必要がある
   field_names TEXT[] := ARRAY['location', 'ship_name', 'berth_number', 'arrival_time', 'departure_time', 'arrival_side', 'bow_position_m', 'stern_position_m', 'planner_company'];
   changed_fields_array TEXT[]; 
   i INT;
 BEGIN
-  -- 受け取ったJSON配列の各要素をループ処理
   FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data) LOOP
-    --【変更点】検索条件に location を追加し、ユニークキーを3つにする
     SELECT * INTO existing_schedule 
     FROM public.schedules 
     WHERE 
@@ -202,9 +200,7 @@ BEGIN
       schedule_date = (new_schedule->>'schedule_date')::DATE AND 
       ship_name = (new_schedule->>'ship_name');
     
-    -- 既存のレコードが見つからなかった場合: 新規INSERT
     IF existing_schedule IS NULL THEN
-      --【変更点】INSERT文のカラムリストとVALUESリストに location を追加
       INSERT INTO public.schedules (
         location, ship_name, berth_number, arrival_time, departure_time, arrival_side,
         bow_position_m, stern_position_m, planner_company, schedule_date,
@@ -220,21 +216,18 @@ BEGIN
       );
       _inserted_count := _inserted_count + 1;
     ELSE
-      -- 既存のレコードが見つかった場合: UPDATE処理
-      -- data_hashを比較して、内容に変更があったか判定
       IF existing_schedule.data_hash IS DISTINCT FROM (new_schedule->>'data_hash') THEN
         -- data_hashに差分あり: 変更内容を記録してUPDATE
         old_values := string_to_array(existing_schedule.data_hash, '|'); 
         new_values := string_to_array(new_schedule->>'data_hash', '|'); 
         changed_fields_array := ARRAY[]::TEXT[];
-        -- field_names配列を元に、どのフィールドが変更されたかチェック
         FOR i IN 1..array_length(field_names, 1) LOOP 
           IF old_values[i] IS DISTINCT FROM new_values[i] THEN 
             changed_fields_array := array_append(changed_fields_array, field_names[i]); 
           END IF; 
         END LOOP;
         
-        --【変更点】UPDATE文のSET句に location を追加
+        -- ▼▼▼ 変更点: remarksの更新ロジックを条件分岐に変更 ▼▼▼
         UPDATE public.schedules SET
           location = new_schedule->>'location',
           arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, 
@@ -244,7 +237,11 @@ BEGIN
           stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
           planner_company = new_schedule->>'planner_company', 
           berth_number = (new_schedule->>'berth_number')::INT, 
-          remarks = new_schedule->>'remarks',
+          -- remarksの更新ロジック
+          remarks = CASE 
+                      WHEN new_schedule->>'remarks' IS NOT NULL AND new_schedule->>'remarks' <> '' THEN new_schedule->>'remarks' 
+                      ELSE existing_schedule.remarks 
+                    END,
           data_hash = new_schedule->>'data_hash', 
           last_import_id = new_schedule->>'last_import_id',
           changed_fields = CASE WHEN array_length(changed_fields_array, 1) > 0 THEN to_jsonb(changed_fields_array) ELSE NULL END
@@ -255,13 +252,16 @@ BEGIN
         UPDATE public.schedules SET
           last_import_id = new_schedule->>'last_import_id',
           changed_fields = NULL,
-          remarks = new_schedule->>'remarks'
+          -- ▼▼▼ こちらのremarks更新ロジックも同様に変更 ▼▼▼
+          remarks = CASE 
+                      WHEN new_schedule->>'remarks' IS NOT NULL AND new_schedule->>'remarks' <> '' THEN new_schedule->>'remarks' 
+                      ELSE existing_schedule.remarks 
+                    END
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       END IF;
     END IF;
   END LOOP;
-  -- 更新件数と新規作成件数を返す
   RETURN QUERY SELECT _updated_count, _inserted_count;
 END;
 $$;
@@ -362,21 +362,26 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 8.1. ディレクトリ構成図
 code
 .
-├── /app/                                  # Next.jsのApp Router。フォルダ構造がURLになる
-│   ├── /dashboard/                      # PC版ダッシュボード関連 (/dashboard/...)
-│   │   ├── /[date]/
-│   │   │   └── page.tsx                 # 【サーバー】ダッシュボード本体。データ取得とUIコンテナの役割
+├── /app/
+│   ├── /dashboard/
+│   │   ├── /[location]/              #【変更】地点ごとの動的ルート
+│   │   │   └── /[date]/
+│   │   │       └── page.tsx          # 【サーバー】データ取得の起点
 │   │   └── /import/
-│   │       └── page.tsx                 # 【クライアント】データ一括インポートページ
+│   │       ├── ImportClient.tsx      # 【クライアント・新規】UIとロジック
+│   │       └── page.tsx              # 【サーバー・変更】データ取得のみ
 │   ├── /home/
-│   │   └── page.tsx                     # 【クライアント】PCユーザー向けのトップページ（メニュー画面）
+│   │   ├── HomeClient.tsx            # 【クライアント・新規】UIとロジック
+│   │   └── page.tsx                  # 【サーバー・変更】データ取得のみ
 │   ├── /login/
-│   │   └── page.tsx                     # 【クライアント】ログインフォームページ
-│   ├── /mobile/                         # モバイル専用画面関連 (/mobile/...)
-│   │   └── /[date]/
-│   │       └── page.tsx                 # 【サーバー】スマートフォン用閲覧画面。データ取得を行う
-│   └── /print/                          # 印刷プレビュー関連 (/print/...)
-│       ├── /[date]/
+│   │   └── page.tsx
+│   ├── /mobile/
+│   │   ├── /[location]/              #【変更】地点ごとの動的ルート
+│   │   │   └── /[date]/
+│   │   │       └── page.tsx
+│   └── /print/
+│       ├── /[location]/              #【変更】地点ごとの動的ルート
+│       │   └── /[date]/
 │       │   ├── PrintPageClient.tsx      # 【クライアント】印刷レイアウトの構築と印刷実行
 │       │   └── page.tsx                 # 【サーバー】印刷用データの取得
 │       ├── layout.tsx                   # 印刷ページ専用の最小限HTMLレイアウト
@@ -393,17 +398,21 @@ code
 │   ├── /components/                     # 再利用可能なUIコンポーネント
 │   │   ├── /ui/
 │   │   │   └── Combobox.tsx             # 自由入力可能なカスタムコンボボックス
+│   │   │   └── TimePicker.tsx        # 【新規】カスタム時刻ピッカー
 │   │   ├── AnchorInfoModal.tsx          # 【クライアント】モバイル用。アンカー/極限位置情報モーダル
+│   │   ├── CraneLimitChart.tsx       # 【変更】印刷ページ用の複合テーブルコンポーネント
 │   │   ├── DashboardClient.tsx          # 【クライアント】PC版ダッシュボードのUIと状態管理の親コンポーネント
 │   │   ├── DashboardHeader.tsx          # 【クライアント】日付、当直者、風速情報を表示するヘッダー
 │   │   ├── DateNavigator.tsx            # 【クライアント】日付遷移ボタンとカレンダー
 │   │   ├── DateTimePicker.tsx           # 【クライアント】カスタム日時ピッカー
 │   │   ├── EditDailyReportDialog.tsx    # 【クライアント】日時情報編集モーダル
+│   │   ├── EditPostDialog.tsx        # 【新規】掲示板編集モーダル
 │   │   ├── EditScheduleDialog.tsx       # 【クライアント】船舶・荷役予定の編集/新規作成モーダル
 │   │   ├── GanttChart.tsx               # 【クライアント】PC版の船舶図（ガントチャート）
 │   │   ├── MemoEdit.tsx                 # 【クライアント】日次メモの編集/表示コンポーネント
 │   │   ├── MobileGanttChart.tsx         # 【クライアント】スマートフォン専用のスクロール追従型ガントチャート
 │   │   ├── MobileViewClient.tsx         # 【クライアント】スマートフォン画面のUIと状態管理の親コンポーネント
+│   │   ├── PostsBoard.tsx            # 【新規】掲示板表示・操作コンポーネント
 │   │   └── ScheduleTable.tsx            # 【クライアント】荷役予定詳細テーブル
 │   ├── /lib/
 │   │   ├── /supabase/
@@ -463,6 +472,15 @@ package.json: プロジェクトの依存関係とスクリプトを定義する
 /src/components/MobileGanttChart.tsx: ズーム機能がピンチイン・アウト、ボタン操作、ダブルタップリセットに変更。画面中央基点のズームを実現。
 /src/lib/constants.ts: TIME_OPTIONS_30_MINUTES, tenkenkubunなどの定数が追加された。
 /src/lib/supabase/actions.ts: getLatestTenkenkubunサーバーアクションが追加された。
+*   `/src/components/ui/TimePicker.tsx`: 【クライアント】**カスタム時刻ピッカー**。`Select`コンポーネントをベースに、指定された時間範囲（例: 5:00-9:00）を30分刻みで選択させる。
+*   `/src/components/CraneLimitChart.tsx`: 【クライアント】**印刷ページ用複合テーブル**。`DashboardHeader`で印刷時に非表示になる「ミーティング/かわし」「終了点検」と、「極限位置テーブル」をまとめて表示する。
+*   `/src/components/DashboardClient.tsx`: 【クライアント】**PC版ダッシュボードのメインコンテナ**。サーバーから受け取ったデータを元に、`DashboardHeader`, `GanttChart`, `ScheduleTable`などの主要コンポーネントを配置・管理する。「お知らせボタン」の表示制御も担う。
+*   `/src/components/DashboardHeader.tsx`: 【クライアント】**PC/印刷 共通ヘッダー**。`isPrintView` propに応じてレイアウトを動的に変更し、日付、当直、風速、各種点検情報を表示する。
+*   `/src/components/EditPostDialog.tsx`: 【クライアント】**掲示板 編集モーダル**。投稿の新規作成と編集を行うためのフォーム。`Calendar`での日付選択や`Switch`によるフラグ設定機能を持つ。
+*   `/src/components/GanttChart.tsx`: 【クライアント】**PC/印刷 共通ガントチャート**。`location` propに応じて`constants.ts`から設定を読み込み、ビット番号やクレーン止め位置を動的に描画。印刷時には、自身のコンポーネント下部に障害物チャート（BUSBAR, CB）を追加で描画する。
+*   `/src/components/MobileGanttChart.tsx`: 【クライアント】**スマートフォン専用ガントチャート**。ピンチイン・アウト、ダブルタップリセットなど、タッチ操作に最適化されたズーム機能を持つ。「情報表示モード」と「船間距離モード」を切り替え可能。
+*   `/src/components/MobileViewClient.tsx`: 【クライアント】**スマートフォン画面のメインコンテナ**。`MobileGanttChart`を配置し、「船間表示モード」の切り替え状態を管理する。ページ全体のピンチズーム無効化ロジックも持つ。
+*   `/src/components/PostsBoard.tsx`: 【クライアント】**掲示板UIコンポーネント**。サーバーから受け取った掲示データを一覧表示し、新規作成・編集・削除のトリガーとなるボタンを配置。モーダルの開閉状態を管理する。
 *   **新規・変更ファイル概要**:
     *   `/src/app/home/HomeClient.tsx`: 【新規】ホーム画面のUIとインタラクションを担うクライアントコンポーネント。
     *   `/src/app/home/page.tsx`: 【変更】サーバーコンポーネント化。データ取得を行い`HomeClient`に渡す役割に専念。

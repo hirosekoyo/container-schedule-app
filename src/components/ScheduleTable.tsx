@@ -98,8 +98,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
           <TableRow>
             <TableHead rowSpan={2} className="h-4 py-0 px-1 " style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1 text-center" style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>着岸 時間</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>離岸 時間</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>着岸時間</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>離岸時間</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>

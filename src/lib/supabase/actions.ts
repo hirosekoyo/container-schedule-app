@@ -392,3 +392,25 @@ export async function checkAttentionPosts(): Promise<boolean> {
   return (count ?? 0) > 0;
   // ▲▲▲ ここまで修正 ▲▲▲
 }
+
+/**
+ * schedulesテーブル全体の最新のupdated_atを取得する
+ */
+export async function getOverallLatestUpdate(): Promise<string | null> {
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('schedules')
+    .select('updated_at')
+    .not('updated_at', 'is', null) // nullでないものを対象
+    .order('updated_at', { ascending: false }) // 降順ソート
+    .limit(1) // 最初の1件だけ取得
+    .single(); // 1件のレコードとして取得
+
+  if (error || !data) {
+    console.error("Error fetching overall latest update:", error?.message);
+    return null;
+  }
+
+  return data.updated_at;
+}

@@ -9,8 +9,9 @@ import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
-// ▼▼▼ BellRing アイコンをインポート ▼▼▼
 import { Printer, Home, BellRing } from 'lucide-react';
+// ▼▼▼ 変更点1: date-fns-tzから必要な関数をインポート ▼▼▼
+import { format, toDate } from 'date-fns-tz';
 
 interface DashboardClientProps {
   initialReport: DailyReport | null;
@@ -19,32 +20,59 @@ interface DashboardClientProps {
   date: string;
   currentImportId?: string;
   isPrintView?: boolean;
-  hasAttentionPosts: boolean; // 新しいpropを受け取る
+  hasAttentionPosts: boolean;
 }
 
 export function DashboardClient({
-    initialReport,
+  initialReport,
   initialSchedules,
   initialLatestImportId,
   date,
   currentImportId,
   isPrintView = false,
-  hasAttentionPosts, // 新しいpropを受け取る
+  hasAttentionPosts,
 }: DashboardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithOperations | null>(null);
 
   const handleScheduleClick = (schedule: ScheduleWithOperations | null) => {
-    // 印刷時はクリックしても何もしない
     if (isPrintView) return;
     setSelectedSchedule(schedule);
     setIsModalOpen(true);
   };
 
+  // ▼▼▼ 変更点2: MobileViewClientからロジックを移植 ▼▼▼
+  const getLatestUpdateTime = () => {
+    if (!initialSchedules || initialSchedules.length === 0) {
+      return null;
+    }
+    const latestUpdate = initialSchedules.reduce((latest, current) => {
+      if (!current.updated_at) return latest;
+      const latestDate = latest ? new Date(latest) : new Date(0);
+      const currentDate = new Date(current.updated_at);
+      return currentDate > latestDate ? current.updated_at : latest;
+    }, null as string | null);
+
+    if (!latestUpdate) {
+      return null;
+    }
+    
+    const dateInTokyo = toDate(latestUpdate, { timeZone: 'Asia/Tokyo' });
+    return format(dateInTokyo, 'MM/dd HH:mm');
+  };
+  const latestUpdateTime = getLatestUpdateTime();
+
   return (
     <div className={`flex flex-1 flex-col gap-4 md:gap-8 ${isPrintView ? 'print-content' : ''}`}>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">船舶動静表-IC</h1>
+        <div>
+          <h1 className="text-3xl font-bold">船舶動静表-IC</h1>
+          {latestUpdateTime && (
+            <p className="text-sm text-gray-500 mt-1">
+              最終更新: {latestUpdateTime}
+            </p>
+          )}
+        </div>
         {!isPrintView && (
           <div className="flex items-center gap-4">
             {/* ▼▼▼ お知らせボタンを条件付きで表示 ▼▼▼ */}
@@ -64,9 +92,9 @@ export function DashboardClient({
             </Button>
             
             <DateNavigator 
-             currentDate={date} 
-             importId={currentImportId} 
-             basePath="/dashboard"
+              currentDate={date} 
+              importId={currentImportId} 
+              basePath="/dashboard"
             />
             <Button variant="outline" onClick={() => window.open(`/print/${date}`, '_blank')}>
               <Printer className="mr-2 h-4 w-4" /> 印刷
