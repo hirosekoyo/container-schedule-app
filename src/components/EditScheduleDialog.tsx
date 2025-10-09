@@ -33,13 +33,14 @@ const toDatetimeLocalString = (dbTimestamp: string | null | undefined): string =
   return dbTimestamp.replace(' ', 'T').substring(0, 16);
 };
 
+// ▼▼▼ 変更点1: FormDataの型定義でnullを許容する ▼▼▼
 type ScheduleFormData = Pick<ScheduleInsert, 'ship_name' | 'arrival_side' | 'planner_company' | 'berth_number' | 'remarks' | 'pilot' | 'tug' | 'crane_count'> & {
-  arrival_time_local: string;
-  departure_time_local: string;
+  arrival_time_local: string | null;
+  departure_time_local: string | null;
   bow_position_notation: string;
   stern_position_notation: string;
 };
-type OperationFormData = Omit<OperationInsert, 'id' | 'created_at' | 'schedule_id'> & { start_time_local?: string };
+type OperationFormData = Omit<OperationInsert, 'id' | 'created_at' | 'schedule_id'> & { start_time_local?: string | null, container_count?: number | null };
 
 export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenChange, latestImportId }: EditScheduleDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -95,17 +96,29 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
   const handleScheduleCheckboxChange = (name: 'pilot' | 'tug', checked: CheckedState) => {
     setScheduleData(prev => prev ? { ...prev, [name]: !!checked } : null);
   };
-  const handleScheduleDateTimeChange = (name: 'arrival_time_local' | 'departure_time_local', value: string) => {
+  
+  // ▼▼▼ 変更点2: 引数valueの型を string | null に変更 ▼▼▼
+  const handleScheduleDateTimeChange = (name: 'arrival_time_local' | 'departure_time_local', value: string | null) => {
     setScheduleData(prev => prev ? { ...prev, [name]: value } : null);
   };
   const handleOperationChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setOperationsData(prev => prev.map((op, i) => i === index ? { ...op, [name]: value } : op));
+    
+    // Comboboxからの呼び出しも考慮し、nameで判定
+    const isNumberField = name === 'container_count';
+
+    setOperationsData(prev => 
+      prev.map((op, i) => 
+        i === index 
+          ? { ...op, [name]: isNumberField ? (value === '' ? null : parseInt(value, 10)) : value } 
+          : op
+      )
+    );
   };
-  const handleOperationDateTimeChange = (index: number, value: string) => {
+    const handleOperationDateTimeChange = (index: number, value: string | null) => {
     setOperationsData(prev => prev.map((op, i) => i === index ? { ...op, start_time_local: value } : op));
   };
-  const handleScheduleSideChange = (value: '右舷' | '左舷') => {
+    const handleScheduleSideChange = (value: '右舷' | '左舷') => {
     setScheduleData(prev => prev ? { ...prev, arrival_side: value } : null);
   };
   
@@ -129,7 +142,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     // 状態更新後の新しい行数をセットする
     setScheduleData(prev => prev ? { ...prev, crane_count: newOperations.length } : null);
   };
-  // ▲▲▲ ここまで修正 ▲▲▲
 
   const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -138,13 +150,16 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
     const bow_m_float = bitNotationToMeters(scheduleData.bow_position_notation);
     const stern_m_float = bitNotationToMeters(scheduleData.stern_position_notation);
     if (bow_m_float === null || stern_m_float === null) { alert('位置の形式が不正です'); return; }
-    if (!scheduleData.arrival_time_local || !scheduleData.departure_time_local) { alert('時間は必須です'); return; }
+    // ▼▼▼ 変更点3: 時間がnullの場合のバリデーションを追加 ▼▼▼
+    if (!scheduleData.arrival_time_local || !scheduleData.departure_time_local) {
+      alert('着岸時間と離岸時間は必須です。');
+      return;
+    }
 
     const bow_m = Math.floor(bow_m_float);
     const stern_m = Math.floor(stern_m_float);
 
     const formatForDB = (localString: string): string => {
-      // この関数はnullを返さないことを保証する (呼び出し元でnullチェック済みのため)
       return `${localString.replace('T', ' ')}:00`;
     };
 
@@ -175,11 +190,11 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
       last_import_id: latestImportId,
       changed_fields: null,
     };
-    
+
     const opsToSave = operationsData.map(op => ({
       start_time: op.start_time_local || null,
       crane_names: op.crane_names,
-      container_count: op.container_count ? Number(op.container_count) : null,
+      container_count: (op.container_count === null || op.container_count === undefined) ? null : Number(op.container_count),
       stevedore_company: op.stevedore_company,
     }));
 
@@ -223,8 +238,6 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
         </DialogHeader>
 
         <form id="edit-schedule-form" onSubmit={handleSubmit} className="space-y-6 overflow-y-auto pr-6 flex-grow">
-          
-          {/* ▼▼▼ 変更点2: 船舶情報をAccordionでラップ ▼▼▼ */}
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger>
@@ -239,8 +252,9 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
                   </div>
                   {/* 2行目: 着岸時間 と 離岸時間 */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>着岸時間</Label><DateTimePicker value={scheduleData?.arrival_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('arrival_time_local', v)} /></div>
-                    <div><Label>離岸時間</Label><DateTimePicker value={scheduleData?.departure_time_local || ''} onChange={(v) => handleScheduleDateTimeChange('departure_time_local', v)} /></div>
+                    {/* ▼▼▼ 変更点4: valueにnullを許容するように ?? null を追加 ▼▼▼ */}
+                    <div><Label>着岸時間</Label><DateTimePicker value={scheduleData?.arrival_time_local ?? null} onChange={(v) => handleScheduleDateTimeChange('arrival_time_local', v)} /></div>
+                    <div><Label>離岸時間</Label><DateTimePicker value={scheduleData?.departure_time_local ?? null} onChange={(v) => handleScheduleDateTimeChange('departure_time_local', v)} /></div>
                   </div>
                   {/* 3行目: おもて, とも, 舷付け, プランナ */}
                   <div className="grid grid-cols-4 gap-4">
@@ -267,15 +281,21 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h3 className="text-lg font-semibold">荷役作業</h3>
-              <Button type="button" size="sm" variant="outline" onClick={addOperationRow}><PlusCircle className="mr-2 h-4 w-4" />作業を追加</Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={addOperationRow}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  作業を追加
+                </Button>
+              </div>
             </div>
             <div className="space-y-4">
               {operationsData.map((op, index) => (
                 <div key={index} className="space-y-2 rounded-md border p-4">
                   <div className="grid grid-cols-10 gap-4 items-end">
-                    <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local || ''} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
+                    <div className="col-span-4"><Label>荷役開始</Label><DateTimePicker value={op.start_time_local ?? null} onChange={(v) => handleOperationDateTimeChange(index, v)} /></div>
                     <div className="col-span-2"><Label>使用GC</Label><Combobox options={CRANE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.crane_names || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'crane_names', value } } as any)} placeholder="GCを選択..." /></div>
-                    <div className="col-span-1"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count || ''} onChange={(e) => handleOperationChange(index, e)} /></div>
+                    {/* ▼▼▼ valueの評価方法を ?? に変更 ▼▼▼ */}
+                    <div className="col-span-1"><Label>本数</Label><Input name="container_count" type="number" value={op.container_count ?? ''} onChange={(e) => handleOperationChange(index, e)} /></div>
                     <div className="col-span-2"><Label>GC運転</Label><Combobox options={STEVEDORE_OPTIONS.map(val => ({ value: val, label: val }))} value={op.stevedore_company || ''} onChange={(value) => handleOperationChange(index, { target: { name: 'stevedore_company', value } } as any)} placeholder="会社を選択..." /></div>
                     <div className="col-span-1"><Button type="button" variant="ghost" size="icon" onClick={() => removeOperationRow(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
                   </div>
@@ -283,8 +303,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
               ))}
             </div>
           </div>
-
-          {/* ▼▼▼ 変更点3: G数、備考、Pilot/Tugを新しい行に移動 ▼▼▼ */}
+          
           <div className="grid grid-cols-10 gap-4 items-start pt-4">
             <div className="col-span-1">
               <Label>G数</Label>
@@ -307,7 +326,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           </div>
 
         </form>
-
+        
         <DialogFooter className="pt-4 flex-shrink-0">
           <Button type="submit" form="edit-schedule-form" disabled={isPending}>
             {isPending ? "更新中..." : "更新"}

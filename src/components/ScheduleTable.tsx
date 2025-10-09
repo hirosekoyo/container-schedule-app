@@ -48,7 +48,9 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
   scheduleDateStr,
   eventTimeStr,
 }) => {
-  if (!scheduleDateStr || !eventTimeStr) return <span>-</span>;
+  // ▼▼▼ 変更点1: 未定の場合の表示を追加 ▼▼▼
+  if (!eventTimeStr) return <span>未定</span>;
+  if (!scheduleDateStr) return <span>-</span>; 
   const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
   const scheduleDateObj = new Date(scheduleDateStr);
   const eventDay = eventDateObj.getDate();
@@ -135,7 +137,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
           {schedules.map((schedule) => {
               const operations = schedule.cargo_operations || [];
               const craneNames = operations.map(op => op.crane_names ?? '-').join('\n');
-              const containerCounts = operations.map(op => op.container_count ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
               let rowClassName = '';
               if (latestImportId) {
@@ -172,13 +173,24 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                       )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
                     ) : '-'}
                   </TableCell>
-                  {/* ▼▼▼ ここからが変更箇所です ▼▼▼ */}
+                  
                   <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
-                    {(schedule.crane_count ?? 0) > 0 ? schedule.crane_count : '-'}
+                    {schedule.crane_count === 0 ? '未定' : (schedule.crane_count ?? '-')}
                   </TableCell>
-                  {/* ▲▲▲ ここまで変更 ▲▲▲ */}
+
                   <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
-                  <TableCell className="whitespace-pre-line">{containerCounts}</TableCell>
+                  
+                  {/* ▼▼▼ 本数の表示ロジックを修正 ▼▼▼ */}
+                  <TableCell className="whitespace-pre-line">
+                    {operations.length > 0 ? (
+                      operations.map((op) => (
+                        <div key={op.id}>
+                          {op.container_count === 0 ? '未定' : (op.container_count ?? '-')}
+                        </div>
+                      ))
+                    ) : '-'}
+                  </TableCell>
+                  
                   <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
                   <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
                   

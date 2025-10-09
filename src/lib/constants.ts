@@ -15,7 +15,7 @@ export const CRANE_OPTIONS = [
  */
 export const STEVEDORE_OPTIONS = [
   'HKK',
-  'NEC',
+  'NEX',
   'GEN',
   'SOG',
   'KAM',
