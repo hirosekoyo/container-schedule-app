@@ -9,8 +9,8 @@ import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EditScheduleDialog } from '@/components/EditScheduleDialog';
-import { Printer, Home, BellRing } from 'lucide-react';
-// ▼▼▼ 変更点1: date-fns-tzから必要な関数をインポート ▼▼▼
+// ▼▼▼ 変更点1: Share2 アイコンをインポート ▼▼▼
+import { Printer, Home, BellRing, Share2 } from 'lucide-react';
 import { format, toDate } from 'date-fns-tz';
 
 interface DashboardClientProps {
@@ -41,7 +41,6 @@ export function DashboardClient({
     setIsModalOpen(true);
   };
 
-  // ▼▼▼ 変更点2: MobileViewClientからロジックを移植 ▼▼▼
   const getLatestUpdateTime = () => {
     if (!initialSchedules || initialSchedules.length === 0) {
       return null;
@@ -92,10 +91,16 @@ export function DashboardClient({
             </Button>
             
             <DateNavigator 
-              currentDate={date} 
-              importId={currentImportId} 
-              basePath="/dashboard"
+             currentDate={date} 
+             importId={currentImportId} 
+             basePath="/dashboard"
             />
+            
+            {/* ▼▼▼ 変更点2: 「外部共有」ボタンを追加 ▼▼▼ */}
+            <Button variant="outline" onClick={() => window.open(`/print/${date}?mode=share`, '_blank')}>
+              <Share2 className="mr-2 h-4 w-4" /> 外部共有
+            </Button>
+
             <Button variant="outline" onClick={() => window.open(`/print/${date}`, '_blank')}>
               <Printer className="mr-2 h-4 w-4" /> 印刷
             </Button>
@@ -105,7 +110,7 @@ export function DashboardClient({
       </div>
 
       <DashboardHeader date={date} report={initialReport} isPrintView={isPrintView} />
-
+      
       <div className="rounded-lg border bg-white p-4 shadow-sm">
         <h2 className="text-xl font-semibold mb-4">船舶図</h2>
         <div className="relative" style={{ height: isPrintView ? '11cm' : '80vh' }}>

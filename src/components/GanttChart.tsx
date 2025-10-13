@@ -13,6 +13,7 @@ interface GanttChartProps {
   isPrintView?: boolean;
   printWidth?: number;
   report: DailyReport | null;
+  viewMode?: 'print' | 'share'; // viewMode propを追加
 }
 const CHART_START_HOUR = 0;
 const CHART_END_HOUR = 26;
@@ -49,7 +50,7 @@ const calculateBarRange = (schedule: ScheduleWithOperations, baseDateStr: string
   return { startHour, endHour: Math.min(endHour, CHART_END_HOUR) };
 };
 
-const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId, onScheduleClick, isPrintView = false, printWidth, report }) => {
+const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImportId, onScheduleClick, isPrintView = false, printWidth, report, viewMode = 'print' }) => {
   const hourLines = Array.from({ length: TOTAL_CHART_HOURS + 1 }, (_, i) => CHART_START_HOUR + i);
   const timeLabels = Array.from({ length: Math.floor(TOTAL_CHART_HOURS / 3) + 1 }, (_, i) => {
     const hour = CHART_START_HOUR + i * 3;
@@ -102,7 +103,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
       {/* --- 上部ガントチャートエリア --- */}
       <div className="flex-grow grid" style={{ gridTemplateColumns: '2rem 1fr 3.5rem', gridTemplateRows: '3rem 1fr' }}>
         <div></div>
-        <div className="relative">
+<div className="relative">
           {bitLabels.map((label, i) => (
             <div key={`bit-label-${label}`} className="absolute bottom-0 -translate-x-1/2 text-sm font-semibold text-gray-700" style={{ left: i * dynamicBitWidth }}>
               {label}
@@ -116,15 +117,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
               );
           })}
         </div>
-        <div></div> {/* 右上スペーサー */}
+        
+        {/* ▼▼▼ 変更点1: 右上の「風速」見出しを条件付き表示に ▼▼▼ */}
+        <div>
+          {isPrintView && viewMode !== 'share' && (
+            <div className="flex items-center justify-center text-sm font-semibold text-gray-700 h-full">
+              風速
+            </div>
+          )}
+        </div>
+
         <div className="relative">
           {timeLabels.map(({ hour, label }) => (
             <div key={`time-label-left-${hour}`} className="absolute w-full -translate-y-1/2 pr-2 text-right text-xs text-gray-500" style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }}>{label}</div>
           ))}
         </div>
+        
         <div ref={graphAreaRef} className="relative h-full w-full overflow-hidden">
           <div className="absolute inset-0">
-            {isPrintView && windData.map((data, index) => {
+            {/* ▼▼▼ 変更点2: 風速背景の色付けを条件付き表示に ▼▼▼ */}
+            {isPrintView && viewMode !== 'share' && windData.map((data, index) => {
               const colorClass = getWindColorClass(data.speed);
               if (!colorClass) return null;
               const topPercent = (data.start / TOTAL_CHART_HOURS) * 100;
@@ -190,18 +202,12 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
             );
           })}
         </div>
+
         <div className="relative h-full w-full">
-          {isPrintView && (
+          {/* ▼▼▼ 変更点3: 右側ラベルエリア全体を条件付き表示に ▼▼▼ */}
+          {isPrintView && viewMode !== 'share' && (
             <>
-              <div className="flex items-center justify-center text-sm font-semibold text-gray-700 h-[3rem] absolute -top-[3rem] w-full">風速</div>
-              {/* ▼▼▼ 修正点4: 右側風速エリアの水平線からprint:を削除し、識別用クラスを追加 ▼▼▼ */}
-              {timeLabels.map(({ hour }) => ( 
-                <div 
-                  key={`extended-hline-${hour}`} 
-                  className="wind-hour-line absolute w-full border-t border-gray-400" 
-                  style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} 
-                /> 
-              ))}
+              {timeLabels.map(({ hour }) => ( <div key={`extended-hline-${hour}`} className="absolute w-full border-t border-gray-400" style={{ top: `${(hour / TOTAL_CHART_HOURS) * 100}%` }} /> ))}
               {report && windData.map((data) => {
                 const speed = data.speed;
                 if (speed == null) return null;

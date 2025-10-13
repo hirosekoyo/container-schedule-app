@@ -3,17 +3,18 @@
 import DashboardHeader from '@/components/DashboardHeader';
 import GanttChart from '@/components/GanttChart';
 import ScheduleTable from '@/components/ScheduleTable';
+import CraneLimitChart from '@/components/CraneLimitChart';
 import { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useEffect } from 'react';
-import CraneLimitChart from '@/components/CraneLimitChart';
 
 interface PrintPageClientProps {
   date: string;
   report: DailyReport | null;
   schedules: ScheduleWithOperations[];
+  viewMode: 'print' | 'share'; // viewModeをpropとして受け取る
 }
 
-export function PrintPageClient({ date, report, schedules }: PrintPageClientProps) {
+export function PrintPageClient({ date, report, schedules, viewMode }: PrintPageClientProps) {
   useEffect(() => {
     const timer = setTimeout(() => window.print(), 1000);
     const handleAfterPrint = () => window.close();
@@ -40,12 +41,12 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
               date={date}
               report={report}
               isPrintView={true}
+              viewMode={viewMode} // viewModeを渡す
             />
           </header>
 
           {/* 2. 船舶図 (gridの2行目) */}
           <div className="print-gantt-card">
-            {/* <h2 style={{ fontSize: '12pt', fontWeight: '600', marginBottom: '0.25rem' }}>船舶図</h2> */}
             <div style={{ height: '100%', position: 'relative' }}>
               <GanttChart
                 schedules={schedules}
@@ -54,19 +55,19 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
                 onScheduleClick={() => { }}
                 isPrintView={true}
                 printWidth={GANTT_PRINT_WIDTH}
-                report={report} // この行を追加
+                report={report}
+                viewMode={viewMode} // viewModeを渡す
               />
             </div>
           </div>
 
-          {/* ここで高さを指定する必要はなくなります */}
           <CraneLimitChart 
             isPrintView={true}
             printWidth={GANTT_PRINT_WIDTH} 
             report={report}
+            // CraneLimitChartはviewModeに依存しないので渡さなくてもOK
           />
 
-          {/* 4. 荷役予定詳細 (gridの4行目) */}
           <div className="print-table-card">
             {/* <h2 className="text-xl font-semibold">荷役予定詳細</h2> */}
             <div className="print-table">
@@ -75,10 +76,11 @@ export function PrintPageClient({ date, report, schedules }: PrintPageClientProp
                 latestImportId={null}
                 onScheduleClick={() => { }}
                 isPrintView={true}
+                viewMode={viewMode} // viewModeを渡す
               />
             </div>
           </div>
-
+          
         </div>
       </div>
     </div>

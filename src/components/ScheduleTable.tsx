@@ -13,6 +13,7 @@ interface ScheduleTableProps {
   latestImportId: string | null;
   onScheduleClick: (schedule: ScheduleWithOperations | null) => void;
   isPrintView?: boolean;
+  viewMode?: 'print' | 'share'; // viewMode propを追加
 }
 
 /**
@@ -69,7 +70,7 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
 };
 
 
-const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick, isPrintView = false }) => {
+const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId, onScheduleClick, isPrintView = false, viewMode = 'print' }) => {
   const [isPending, startTransition] = useTransition();
 
   const handleDeleteClick = (e: React.MouseEvent, scheduleId: number, shipName: string) => {
@@ -93,25 +94,36 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
     });
   };
 
+  // ▼▼▼ 変更点1: colSpanの値を動的に計算 ▼▼▼
+  // 通常表示: 17, print: 19, share: 19 - (荷役5 + プランナ1 + PT2) = 11
+  const newRowColSpan = isPrintView 
+    ? (viewMode === 'share' ? 11 : 19)
+    : 17;
+
   return (
     <div className={`w-full h-full overflow-hidden rounded-lg border ${isPrintView ? 'print-table' : ''}`}>
       <Table>
-        {/* ▼▼▼ 変更箇所: ヘッダーを2段構成に変更 ▼▼▼ */}
         <TableHeader className="bg-gray-50">
           <TableRow>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1 " style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
+            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '80px' }}>岸壁</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1 text-center" style={{ width: isPrintView ? '15%' : '200px' }}>船名</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>着岸時間</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>離岸時間</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>方向</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>おもて</TableHead>
             <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '6%' : '' }}>とも</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
-            <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
+            
+            {/* ▼▼▼ 変更点2: 荷役〜プランナのヘッダーを条件付き表示に ▼▼▼ */}
+            {viewMode !== 'share' && (
+              <>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '8%' : '' }}>荷役開始</TableHead>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '2%' : '' }}>G</TableHead>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '7%' : '' }}>使用GC</TableHead>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>本数</TableHead>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '5%' : '' }}>運転</TableHead>
+                <TableHead rowSpan={2} className="h-4 py-0 px-1" style={{ width: isPrintView ? '4%' : '' }}>プランナ</TableHead>
+              </>
+            )}
             
             <TableHead colSpan={2} className="text-center h-4 py-0 px-1">PILOT TUG</TableHead>
             {isPrintView && (
@@ -169,33 +181,34 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   <TableCell className={getCellClass('arrival_side')}>{schedule.arrival_side === '左舷' ? '入' : '出'}</TableCell>
                   <TableCell className={getCellClass('bow_position_m')}>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
                   <TableCell className={getCellClass('stern_position_m')}>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
-                  <TableCell className="whitespace-pre-line">
-                    {operations.length > 0 ? (
-                      operations.map(op => (
-                        <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
-                      )).reduce((prev, curr) => <>{prev}{curr}</>, <></>)
-                    ) : '-'}
-                  </TableCell>
                   
-                  <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
+                  {/* ▼▼▼ 変更点3: 荷役〜プランナのセルを条件付き表示に ▼▼▼ */}
+                  {viewMode !== 'share' && (
+                    <>
+                      <TableCell className="whitespace-pre-line">
+                        {operations.length > 0 ? (
+                          operations.map(op => (
+                            <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
+                          ))
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
                     {schedule.crane_count === 0 ? '※' : (schedule.crane_count ?? '-')}
-                  </TableCell>
-
-                  <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
-                  
-                  {/* ▼▼▼ 本数の表示ロジックを修正 ▼▼▼ */}
-                  <TableCell className="whitespace-pre-line">
-                    {operations.length > 0 ? (
-                      operations.map((op) => (
-                        <div key={op.id}>
+                      </TableCell>
+                      <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
+                      <TableCell className="whitespace-pre-line">
+                        {operations.length > 0 ? (
+                          operations.map((op) => (
+                            <div key={op.id}>
                           {op.container_count === 0 ? '※' : (op.container_count ?? '-')}
-                        </div>
-                      ))
-                    ) : '-'}
-                  </TableCell>
-                  
-                  <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
-                  <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
+                            </div>
+                          ))
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
+                      <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
+                    </>
+                  )}
                   
                   <TableCell className={`text-center ${getCellClass('pilot')}`}>{schedule.pilot ? '◯' : '-'}</TableCell>
                   <TableCell className={`text-center ${getCellClass('tug')}`}>{schedule.tug ? '◯' : '-'}</TableCell>
@@ -244,7 +257,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               className="cursor-pointer hover:bg-green-50"
               onClick={() => onScheduleClick(null)}
             >
-              <TableCell colSpan={isPrintView ? 19 : 17} className="text-center text-green-600 font-semibold">
+              {/* ▼▼▼ 変更点4: colSpanの値を動的な変数に変更 ▼▼▼ */}
+              <TableCell colSpan={newRowColSpan} className="text-center text-green-600 font-semibold">
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
                   <span>新規追加</span>
