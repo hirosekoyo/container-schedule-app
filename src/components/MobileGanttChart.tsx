@@ -56,9 +56,9 @@ const ScheduleDetailPopoverContent: React.FC<{ schedule: ScheduleWithOperations 
         {schedule.cargo_operations.map(op => (
           <div key={op.id} className="text-xs mt-1">
             <p>
-              <strong>開始:</strong> {op.start_time ? new Date(op.start_time.replace(' ','T')).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '未定'} | 
+              <strong>開始:</strong> {op.start_time ? new Date(op.start_time.replace(' ','T')).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '※'} | 
               <strong>GC:</strong> {op.crane_names || '-'} | 
-              <strong>本数:</strong> {op.container_count === 0 ? '未定' : (op.container_count ?? '-')}
+              <strong>本数:</strong> {op.container_count === 0 ? '※' : (op.container_count ?? '-')}
             </p>
           </div>
         ))}

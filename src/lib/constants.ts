@@ -15,10 +15,11 @@ export const CRANE_OPTIONS = [
  */
 export const STEVEDORE_OPTIONS = [
   'HKK',
-  'NEX',
-  'GEN',
+  'NX',
   'SOG',
   'KAM',
+  'GEN',
+  'TYO',
   'MIT', // プランナ変換表に含まれているので追加
   'ふ頭', // プランナ変換表に含まれているので追加
 ];
@@ -30,7 +31,7 @@ export const PLANNER_TO_STEVEDORE_MAP: { [key: string]: string } = {
   'ジェネック': 'GEN',
   '相互運輸': 'SOG',
   '博多港運': 'HKK',
-  '日本通運': 'NEX',
+  '日本通運': 'NX',
   '上組': 'KAM',
   '三菱倉庫': 'MIT',
 };
@@ -53,3 +54,12 @@ export const TIME_OPTIONS_30_MINUTES = Array.from({ length: 12 }, (_, i) => {
   const time = `${hours}:${minutes}`;
   return { value: time, label: time };
 });
+
+export const getWindColorClass = (speed: number | null | undefined): string => {
+  if (speed == null) return '';
+  // if (speed >= 20) return 'bg-red-300/30';
+  if (speed >= 16) return 'bg-red-300/60';
+  if (speed >= 10) return 'bg-yellow-300/50';
+  return '';
+};
+

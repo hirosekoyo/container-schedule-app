@@ -4,7 +4,7 @@ import { EditDailyReportDialog } from './EditDailyReportDialog';
 import { DailyReport } from '@/lib/supabase/actions';
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { tenkenkubun } from '@/lib/constants';
+import { tenkenkubun,getWindColorClass } from '@/lib/constants';
 
 interface DashboardHeaderProps {
   date: string;
@@ -29,14 +29,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ date, report, isPrint
   const kawasiDisplayValue = report?.kawasi_time 
     ? `${report.kawasi_time.slice(0, 5)}${report.company ? ` (${report.company})` : ''}` 
     : 'なし';
-
-  const getWindColorClass = (speed: number | null | undefined): string => {
-    if (speed == null) return '';
-    if (speed >= 20) return 'bg-red-300/30';
-    if (speed >= 16) return 'bg-orange-300/30';
-    if (speed >= 10) return 'bg-yellow-300/30';
-    return '';
-  };
   
   const fontSizeClass = isPrintView ? 'text-[8pt]' : 'text-xl';
   const windFontSizeClass = isPrintView ? 'text-[8pt]' : 'text-[15px]';

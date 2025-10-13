@@ -3,6 +3,7 @@
 import type { DailyReport, ScheduleWithOperations } from '@/lib/supabase/actions';
 import React, { useState, useEffect, useRef } from 'react';
 import { metersToBitPosition, bitNotationToMeters } from '@/lib/coordinateConverter';
+import {getWindColorClass } from '@/lib/constants';
 
 interface GanttChartProps {
   schedules: ScheduleWithOperations[];
@@ -83,14 +84,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ schedules, baseDate, latestImpo
     { id: 7, text: '7', position: 52.5 }, { id: 8, text: '8', position: 55.5 },
     { id: 9, text: '9', position: 60.2 }, { id: 10, text: '10', position: 63.2 },
   ];
-
-  const getWindColorClass = (speed: number | null | undefined): string => {
-    if (speed == null) return '';
-    if (speed >= 20) return 'bg-red-300/30';
-    if (speed >= 16) return 'bg-orange-300/30';
-    if (speed >= 10) return 'bg-yellow-300/30';
-    return '';
-  };
   
   const windData = report ? [
     { start: 0,  end: 3,  speed: report.wind_speed_1 },

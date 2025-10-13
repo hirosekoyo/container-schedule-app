@@ -48,8 +48,8 @@ const TimeOnlyDisplay: React.FC<{ scheduleDateStr: string | null; eventTimeStr: 
   scheduleDateStr,
   eventTimeStr,
 }) => {
-  // ▼▼▼ 変更点1: 未定の場合の表示を追加 ▼▼▼
-  if (!eventTimeStr) return <span>未定</span>;
+  // ▼▼▼ 変更点1: ※の場合の表示を追加 ▼▼▼
+  if (!eventTimeStr) return <span>※</span>;
   if (!scheduleDateStr) return <span>-</span>; 
   const eventDateObj = new Date(eventTimeStr.replace(' ', 'T'));
   const scheduleDateObj = new Date(scheduleDateStr);
@@ -175,7 +175,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   </TableCell>
                   
                   <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
-                    {schedule.crane_count === 0 ? '未定' : (schedule.crane_count ?? '-')}
+                    {schedule.crane_count === 0 ? '※' : (schedule.crane_count ?? '-')}
                   </TableCell>
 
                   <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
@@ -185,7 +185,7 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                     {operations.length > 0 ? (
                       operations.map((op) => (
                         <div key={op.id}>
-                          {op.container_count === 0 ? '未定' : (op.container_count ?? '-')}
+                          {op.container_count === 0 ? '※' : (op.container_count ?? '-')}
                         </div>
                       ))
                     ) : '-'}
