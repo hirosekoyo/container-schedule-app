@@ -176,7 +176,8 @@ COMMENT ON COLUMN public.posts.is_attention IS 'trueの場合、目立たせる�
 --       - 既存データ(location, schedule_date, ship_nameで特定)は、内容(data_hash)を比較してUPDATEする。
 --       - data_hashに差分があれば、どのフィールドが変更されたかを changed_fields に記録する。
 --       - data_hashに差分がなければ、last_import_id のみ更新し、changed_fields をリセットする。
---       - remarksカラムは、インポートデータに値がある場合のみ更新し、それ以外は既存の値を維持する。
+--       - remarksカラムは、インポートデータに有効な値がある場合のみ更新し、それ以外は既存の値を維持する。
+--       - updated_atカラムは、渡された値で更新する（トリガーではなく、actions.ts側で制御）。
 CREATE OR REPLACE FUNCTION public.upsert_schedules_with_check(schedules_data jsonb)
 RETURNS TABLE(updated_count integer, inserted_count integer)
 LANGUAGE plpgsql
@@ -192,6 +193,7 @@ DECLARE
   changed_fields_array TEXT[]; 
   i INT;
 BEGIN
+  -- 受け取ったJSON配列の各要素をループ処理
   FOR new_schedule IN SELECT * FROM jsonb_array_elements(schedules_data) LOOP
     SELECT * INTO existing_schedule 
     FROM public.schedules 
@@ -201,10 +203,11 @@ BEGIN
       ship_name = (new_schedule->>'ship_name');
     
     IF existing_schedule IS NULL THEN
+      -- 新規作成時: INSERT文に "updated_at" を追加
       INSERT INTO public.schedules (
         location, ship_name, berth_number, arrival_time, departure_time, arrival_side,
         bow_position_m, stern_position_m, planner_company, schedule_date,
-        data_hash, last_import_id, changed_fields, remarks
+        data_hash, last_import_id, changed_fields, remarks, updated_at
       ) VALUES (
         new_schedule->>'location', new_schedule->>'ship_name', 
         (new_schedule->>'berth_number')::INT, (new_schedule->>'arrival_time')::TIMESTAMP,
@@ -212,10 +215,12 @@ BEGIN
         (new_schedule->>'bow_position_m')::NUMERIC, (new_schedule->>'stern_position_m')::NUMERIC, 
         new_schedule->>'planner_company', (new_schedule->>'schedule_date')::DATE,
         new_schedule->>'data_hash', new_schedule->>'last_import_id', 
-        (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks'
+        (new_schedule->'changed_fields')::JSONB, new_schedule->>'remarks',
+        (new_schedule->>'updated_at')::TIMESTAMPTZ -- updated_atの値を渡す
       );
       _inserted_count := _inserted_count + 1;
     ELSE
+      -- data_hashを比較して、内容に変更があったか判定
       IF existing_schedule.data_hash IS DISTINCT FROM (new_schedule->>'data_hash') THEN
         -- data_hashに差分あり: 変更内容を記録してUPDATE
         old_values := string_to_array(existing_schedule.data_hash, '|'); 
@@ -227,7 +232,7 @@ BEGIN
           END IF; 
         END LOOP;
         
-        -- ▼▼▼ 変更点: remarksの更新ロジックを条件分岐に変更 ▼▼▼
+        -- UPDATE文のSET句に "updated_at" を追加
         UPDATE public.schedules SET
           location = new_schedule->>'location',
           arrival_time = (new_schedule->>'arrival_time')::TIMESTAMP, 
@@ -237,26 +242,26 @@ BEGIN
           stern_position_m = (new_schedule->>'stern_position_m')::NUMERIC,
           planner_company = new_schedule->>'planner_company', 
           berth_number = (new_schedule->>'berth_number')::INT, 
-          -- remarksの更新ロジック
           remarks = CASE 
                       WHEN new_schedule->>'remarks' IS NOT NULL AND new_schedule->>'remarks' <> '' THEN new_schedule->>'remarks' 
                       ELSE existing_schedule.remarks 
                     END,
           data_hash = new_schedule->>'data_hash', 
           last_import_id = new_schedule->>'last_import_id',
+          updated_at = (new_schedule->>'updated_at')::TIMESTAMPTZ, -- updated_atの値を渡す
           changed_fields = CASE WHEN array_length(changed_fields_array, 1) > 0 THEN to_jsonb(changed_fields_array) ELSE NULL END
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       ELSE
-        -- data_hashに差分なし: last_import_idと備考のみ更新
+        -- data_hashに差分なし: last_import_id, remarks, updated_atを更新
         UPDATE public.schedules SET
           last_import_id = new_schedule->>'last_import_id',
           changed_fields = NULL,
-          -- ▼▼▼ こちらのremarks更新ロジックも同様に変更 ▼▼▼
           remarks = CASE 
                       WHEN new_schedule->>'remarks' IS NOT NULL AND new_schedule->>'remarks' <> '' THEN new_schedule->>'remarks' 
                       ELSE existing_schedule.remarks 
-                    END
+                    END,
+          updated_at = (new_schedule->>'updated_at')::TIMESTAMPTZ -- updated_atの値を渡す
         WHERE id = existing_schedule.id;
         _updated_count := _updated_count + 1;
       END IF;

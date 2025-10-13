@@ -77,7 +77,7 @@ export function EditScheduleDialog({ schedule, scheduleDateForNew, open, onOpenC
           remarks: '',
           pilot: false,
           tug: false,
-          crane_count: 0,
+          // crane_count: 0,          
           arrival_time_local: initialTime,
           departure_time_local: initialTime,
           bow_position_notation: '',

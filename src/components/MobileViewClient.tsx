@@ -87,10 +87,10 @@ export function MobileViewClient({
       <header className="p-4 border-b flex-shrink-0">
         {/* ▼▼▼ 変更点: ヘッダーのレイアウト構造を修正 ▼▼▼ */}
         <div className="mt-4 flex flex-col gap-2">
-          {/* 1行目: 最終更新時刻 */}
+          {/* 1行目: 最終インポート時刻 */}
           {latestUpdateTime && (
             <p className="text-left text-[10px] text-gray-500">
-              最終更新: {latestUpdateTime}
+              最終インポート: {latestUpdateTime}
             </p>
           )}
           {/* 2行目: ナビゲーターとボタン */}

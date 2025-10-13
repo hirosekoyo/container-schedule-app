@@ -85,7 +85,8 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
   const handleAcknowledgeClick = (e: React.MouseEvent, scheduleId: number) => {
     e.stopPropagation();
     startTransition(async () => {
-      const { error } = await acknowledgeScheduleChange(scheduleId);
+      // 第2引数に latestImportId を渡す
+      const { error } = await acknowledgeScheduleChange(scheduleId, latestImportId);
       if (error) {
         alert(`確認処理中にエラーが発生しました: ${error.message}`);
       }
@@ -138,11 +139,13 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               const operations = schedule.cargo_operations || [];
               const craneNames = operations.map(op => op.crane_names ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
+              
+              // ▼▼▼ 変更点: isDeletedCandidateフラグを定義 ▼▼▼
+              const isDeletedCandidate = latestImportId ? schedule.last_import_id !== latestImportId : false;
+              
               let rowClassName = '';
-              if (latestImportId) {
-                if (schedule.last_import_id !== latestImportId) {
-                  rowClassName = 'bg-red-100/60';
-                }
+              if (isDeletedCandidate) {
+                rowClassName = 'bg-red-100/60';
               }
               const changedFields = (schedule.changed_fields as string[] | null) || [];
               const getCellClass = (fieldName: string) => {
@@ -210,14 +213,15 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                   {!isPrintView && (
                     <TableCell className="text-center align-middle">
                       <div className="flex items-center justify-center gap-1">
-                        {changedFields.length > 0 && (
+                        {/* ▼▼▼ 変更点: 表示条件に isDeletedCandidate を追加 ▼▼▼ */}
+                        {(changedFields.length > 0 || isDeletedCandidate) && (
                           <Button
                             variant="outline"
                             size="icon"
                             onClick={(e) => handleAcknowledgeClick(e, schedule.id)}
                             disabled={isPending}
-                            className="h-8 w-8 bg-yellow-100 hover:bg-yellow-200"
-                            title="変更を確認済みにしてハイライトを消す"
+                            className={`h-8 w-8 ${isDeletedCandidate ? 'bg-red-200 hover:bg-red-300' : 'bg-yellow-100 hover:bg-yellow-200'}`}
+                            title={isDeletedCandidate ? "この予定が最新版に存在することを確認済みにする" : "変更を確認済みにしてハイライトを消す"}
                           >
                             <Check className="h-4 w-4" />
                           </Button>

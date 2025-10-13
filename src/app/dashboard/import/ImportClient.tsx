@@ -112,10 +112,10 @@ export function ImportClient({ latestUpdateTime }: ImportClientProps) {
             {/* <p className="mt-2 text-muted-foreground">
               テキストデータを貼り付けて、予定を一括で登録・更新します。
             </p> */}
-            {/* ▼▼▼ 変更点2: 最終更新時刻を表示 ▼▼▼ */}
+            {/* ▼▼▼ 変更点2: 最終インポート時刻を表示 ▼▼▼ */}
             {formattedLatestUpdate && (
               <p className="mt-2 text-gray-500">
-                データ最終更新: {formattedLatestUpdate}
+                最終インポート: {formattedLatestUpdate}
               </p>
             )}
           </div>

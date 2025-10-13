@@ -69,7 +69,7 @@ export function DashboardClient({
           <h1 className="text-3xl font-bold">船舶動静表-IC</h1>
           {latestUpdateTime && (
             <p className="text-sm text-gray-500 mt-1">
-              最終更新: {latestUpdateTime}
+              最終インポート: {latestUpdateTime}
             </p>
           )}
         </div>

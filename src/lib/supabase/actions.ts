@@ -78,18 +78,24 @@ export async function upsertDailyReport(reportData: DailyReportInsert) {
  * 4. 複数の船舶スケジュールを一括でインポート（高度なUPSERT）する
  */
 export async function importMultipleSchedules(
-  // 引数の型を ScheduleInsert のサブセットにすることで、型の安全性を高める
-  schedulesData: Omit<ScheduleInsert, 'id' | 'created_at'>[]
+  schedulesData: Omit<ScheduleInsert, 'id' | 'created_at' | 'updated_at'>[] // updated_atを除外
 ) {
-  if (!schedulesData || schedulesData.length === 0) {
+    if (!schedulesData || schedulesData.length === 0) {
     return { data: null, error: { message: "登録するデータがありません。" } };
   }
   
+  // ▼▼▼ 変更点: データにupdated_atを追加 ▼▼▼
+  const now = new Date().toISOString();
+  const dataWithTimestamp = schedulesData.map(s => ({
+    ...s,
+    updated_at: now,
+  }));
+
   const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .rpc('upsert_schedules_with_check', {
-      schedules_data: schedulesData // 型定義が更新されたため、すべてのフィールドが正しく渡される
+      schedules_data: dataWithTimestamp // タイムスタンプ付きのデータを渡す
     });
 
   if (error) {
@@ -126,12 +132,18 @@ export async function getLatestImportId(date: string): Promise<string | null> {
  * 新規スケジュールと関連する荷役作業をトランザクションで作成する
  */
 export async function createScheduleWithOperations(
-  scheduleData: Omit<ScheduleInsert, "id" | "created_at">,
+  scheduleData: Omit<ScheduleInsert, "id" | "created_at" | "updated_at">, // updated_atを除外
   operationsData: Omit<OperationInsert, "id" | "created_at" | "schedule_id">[]
 ) {
+  // ▼▼▼ 変更点: データにupdated_atを追加 ▼▼▼
+  const dataWithTimestamp = {
+    ...scheduleData,
+    updated_at: new Date().toISOString(),
+  };
+
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.rpc("create_schedule_with_operations", {
-    schedule_data: scheduleData,
+    schedule_data: dataWithTimestamp, // タイムスタンプ付きのデータを渡す
     operations_data: operationsData,
   });
 
@@ -259,15 +271,20 @@ export async function updateDailyReportMemo(report_date: string, maintenance_uni
 }
 
 /**
- * 指定されたスケジュールの変更確認フラグ（changed_fields）をリセットする
- * @param scheduleId 対象のスケジュールID
+ * 指定されたスケジュールの変更確認フラグ（changed_fields）をリセットし、
+ * last_import_idを最新化する
  */
-export async function acknowledgeScheduleChange(scheduleId: number) {
+export async function acknowledgeScheduleChange(scheduleId: number, latestImportId: string | null) {
   const supabase = createSupabaseServerClient();
+
+  if (!latestImportId) return { error: null }; // 最新のIDがなければ何もしない
 
   const { error } = await supabase
     .from('schedules')
-    .update({ changed_fields: null })
+    .update({ 
+      changed_fields: null,
+      last_import_id: latestImportId // last_import_idを最新化
+    })
     .eq('id', scheduleId);
 
   if (error) {
