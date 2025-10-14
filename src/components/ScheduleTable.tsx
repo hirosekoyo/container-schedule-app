@@ -147,12 +147,18 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
         </TableHeader>
 
         <TableBody>
-          {schedules.map((schedule) => {
+          {/* ▼▼▼ ここからが修正箇所です ▼▼▼ */}
+          {schedules.map((schedule, index) => {
+              // 1つ前のスケジュールを取得
+              const prevSchedule = index > 0 ? schedules[index - 1] : null;
+              // 前の行とberth_numberが変わったかどうかを判定 (最初の行は除く)
+              const showSpacer = prevSchedule && schedule.berth_number !== prevSchedule.berth_number;
+
+              // --- 以下、既存のロジック ---
               const operations = schedule.cargo_operations || [];
               const craneNames = operations.map(op => op.crane_names ?? '-').join('\n');
               const stevedoreCompanies = operations.map(op => op.stevedore_company ?? '-').join('\n');
               
-              // ▼▼▼ 変更点: isDeletedCandidateフラグを定義 ▼▼▼
               const isDeletedCandidate = latestImportId ? schedule.last_import_id !== latestImportId : false;
               
               let rowClassName = '';
@@ -169,87 +175,94 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
                 : 'cursor-pointer hover:bg-gray-100/80 transition-colors';
 
             return (
-              <TableRow 
-                key={`${schedule.id}-${schedule.schedule_date}`} 
-                className={`${rowClassName} ${interactivityClasses}`}
-                onClick={() => !isPrintView && onScheduleClick(schedule)}
-              >
-                  <TableCell className={getCellClass('berth_number')}>{`${schedule.berth_number}${isPrintView ? '' : '岸'}`}</TableCell>
-                  <TableCell className={`font-medium ${getCellClass('ship_name')}`}>{schedule.ship_name}</TableCell>
-                  <TableCell className={getCellClass('arrival_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
-                  <TableCell className={getCellClass('departure_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
-                  <TableCell className={getCellClass('arrival_side')}>{schedule.arrival_side === '左舷' ? '入' : '出'}</TableCell>
-                  <TableCell className={getCellClass('bow_position_m')}>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
-                  <TableCell className={getCellClass('stern_position_m')}>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
-                  
-                  {/* ▼▼▼ 変更点3: 荷役〜プランナのセルを条件付き表示に ▼▼▼ */}
-                  {viewMode !== 'share' && (
-                    <>
-                      <TableCell className="whitespace-pre-line">
-                        {operations.length > 0 ? (
-                          operations.map(op => (
-                            <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
-                          ))
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
-                    {schedule.crane_count === 0 ? '※' : (schedule.crane_count ?? '-')}
-                      </TableCell>
-                      <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
-                      <TableCell className="whitespace-pre-line">
-                        {operations.length > 0 ? (
-                          operations.map((op) => (
-                            <div key={op.id}>
-                          {op.container_count === 0 ? '※' : (op.container_count ?? '-')}
-                            </div>
-                          ))
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
-                      <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
-                    </>
-                  )}
-                  
-                  <TableCell className={`text-center ${getCellClass('pilot')}`}>{schedule.pilot ? '◯' : '-'}</TableCell>
-                  <TableCell className={`text-center ${getCellClass('tug')}`}>{schedule.tug ? '◯' : '-'}</TableCell>
-                  
-                  {isPrintView && (
-                    <>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                    </>
-                  )}
+              <React.Fragment key={`${schedule.id}-${schedule.schedule_date}`}>
+                {/* berth_numberが変わっていたら空白行を挿入 */}
+                {showSpacer && (
+                  <TableRow className="h-3 bg-slate-50 hover:bg-slate-50 pointer-events-none">
+                    <TableCell colSpan={newRowColSpan} className="p-0" />
+                  </TableRow>
+                )}
 
-                  <TableCell className="whitespace-pre-wrap align-middle break-words">{schedule.remarks || ''}</TableCell>
-                  
-                  {!isPrintView && (
-                    <TableCell className="text-center align-middle">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* ▼▼▼ 変更点: 表示条件に isDeletedCandidate を追加 ▼▼▼ */}
-                        {(changedFields.length > 0 || isDeletedCandidate) && (
+                {/* 通常のデータ行 */}
+                <TableRow 
+                  className={`${rowClassName} ${interactivityClasses}`}
+                  onClick={() => !isPrintView && onScheduleClick(schedule)}
+                >
+                    <TableCell className={getCellClass('berth_number')}>{`${schedule.berth_number}${isPrintView ? '' : '岸'}`}</TableCell>
+                    <TableCell className={`font-medium ${getCellClass('ship_name')}`}>{schedule.ship_name}</TableCell>
+                    <TableCell className={getCellClass('arrival_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.arrival_time} /></TableCell>
+                    <TableCell className={getCellClass('departure_time')}><DateTimeDisplay scheduleDateStr={schedule.schedule_date} eventTimeStr={schedule.departure_time} /></TableCell>
+                    <TableCell className={getCellClass('arrival_side')}>{schedule.arrival_side === '左舷' ? '入' : '出'}</TableCell>
+                    <TableCell className={getCellClass('bow_position_m')}>{metersToBitNotation(Number(schedule.bow_position_m))}</TableCell>
+                    <TableCell className={getCellClass('stern_position_m')}>{metersToBitNotation(Number(schedule.stern_position_m))}</TableCell>
+                    
+                    {viewMode !== 'share' && (
+                      <>
+                        <TableCell className="whitespace-pre-line">
+                          {operations.length > 0 ? (
+                            operations.map(op => (
+                              <div key={op.id}><TimeOnlyDisplay  scheduleDateStr={schedule.schedule_date} eventTimeStr={op.start_time} /></div>
+                            ))
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className={`align-middle ${getCellClass('crane_count')}`}>
+                      {schedule.crane_count === 0 ? '※' : (schedule.crane_count ?? '-')}
+                        </TableCell>
+                        <TableCell className="whitespace-pre-line">{craneNames}</TableCell>
+                        <TableCell className="whitespace-pre-line">
+                          {operations.length > 0 ? (
+                            operations.map((op) => (
+                              <div key={op.id}>
+                            {op.container_count === 0 ? '※' : (op.container_count ?? '-')}
+                              </div>
+                            ))
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="whitespace-pre-line">{stevedoreCompanies}</TableCell>
+                        <TableCell className={getCellClass('planner_company')}>{schedule.planner_company || '-'}</TableCell>
+                      </>
+                    )}
+                    
+                    <TableCell className={`text-center ${getCellClass('pilot')}`}>{schedule.pilot ? '◯' : '-'}</TableCell>
+                    <TableCell className={`text-center ${getCellClass('tug')}`}>{schedule.tug ? '◯' : '-'}</TableCell>
+                    
+                    {isPrintView && (
+                      <>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                      </>
+                    )}
+
+                    <TableCell className="whitespace-pre-wrap align-middle break-words">{schedule.remarks || ''}</TableCell>
+                    
+                    {!isPrintView && (
+                      <TableCell className="text-center align-middle">
+                        <div className="flex items-center justify-center gap-1">
+                          {(changedFields.length > 0 || isDeletedCandidate) && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={(e) => handleAcknowledgeClick(e, schedule.id)}
+                              disabled={isPending}
+                              className={`h-8 w-8 ${isDeletedCandidate ? 'bg-red-200 hover:bg-red-300' : 'bg-yellow-100 hover:bg-yellow-200'}`}
+                              title={isDeletedCandidate ? "この予定が最新版に存在することを確認済みにする" : "変更を確認済みにしてハイライトを消す"}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={(e) => handleAcknowledgeClick(e, schedule.id)}
-                            disabled={isPending}
-                            className={`h-8 w-8 ${isDeletedCandidate ? 'bg-red-200 hover:bg-red-300' : 'bg-yellow-100 hover:bg-yellow-200'}`}
-                            title={isDeletedCandidate ? "この予定が最新版に存在することを確認済みにする" : "変更を確認済みにしてハイライトを消す"}
+                            variant="ghost" size="icon"
+                            onClick={(e) => handleDeleteClick(e, schedule.id, schedule.ship_name)}
+                            disabled={isPending} className="h-8 w-8 hover:bg-red-100"
                           >
-                            <Check className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost" size="icon"
-                          onClick={(e) => handleDeleteClick(e, schedule.id, schedule.ship_name)}
-                          disabled={isPending} className="h-8 w-8 hover:bg-red-100"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-              </TableRow>
+                        </div>
+                      </TableCell>
+                    )}
+                </TableRow>
+              </React.Fragment>
             );
           })}
           {!isPrintView && (
@@ -257,7 +270,6 @@ const ScheduleTable: React.FC<ScheduleTableProps> = ({ schedules, latestImportId
               className="cursor-pointer hover:bg-green-50"
               onClick={() => onScheduleClick(null)}
             >
-              {/* ▼▼▼ 変更点4: colSpanの値を動的な変数に変更 ▼▼▼ */}
               <TableCell colSpan={newRowColSpan} className="text-center text-green-600 font-semibold">
                 <div className="flex items-center justify-center gap-2">
                   <PlusCircle className="h-4 w-4" />
