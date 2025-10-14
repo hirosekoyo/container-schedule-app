@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+
+// ① Lightbox関連のコンポーネントとCSSをインポート
+import Lightbox from "yet-another-react-lightbox";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import "yet-another-react-lightbox/styles.css";
 
 interface AnchorInfoModalProps {
   open: boolean;
@@ -26,16 +34,20 @@ const limitData = [
 
 
 export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
+  const [isImageVisible, setIsImageVisible] = useState(false);
+  // ② Lightboxの開閉を管理するstateを追加
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>アンカー位置 & 極限位置</DialogTitle>
-        </DialogHeader>
-        <div className="mt-4 space-y-6 text-xs">
-          
-          {/* --- 【ここからが修正箇所】 --- */}
-          {/* アンカー位置テーブル */}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>アンカー位置 & 極限位置</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-6 text-xs">
+            
+          {/* アンカー位置テーブル (変更なし) */}
           <div>
             <h3 className="font-semibold mb-2">アンカー位置</h3>
             <Table className="border">
@@ -52,7 +64,7 @@ export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
             </Table>
           </div>
 
-          {/* 極限位置テーブル */}
+          {/* 極限位置テーブル (変更なし) */}
           <div>
             <h3 className="font-semibold mb-2">極限位置</h3>
             <Table className="border">
@@ -74,10 +86,48 @@ export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
               </TableBody>
             </Table>
           </div>
-          {/* --- 【ここまで】 --- */}
+          
+          {/* --- ▼▼▼ ここからが追加部分です ▼▼▼ --- */}
+            <div className="mt-6 border-t pt-4">
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsImageVisible(!isImageVisible)}
+                >
+                {isImageVisible ? '画像を閉じる' : '画像を表示'}
+                </Button>
+              </div>
 
-        </div>
-      </DialogContent>
-    </Dialog>
+              {isImageVisible && (
+                // ③ 画像をクリックしたらLightboxを開くようにする
+                <div 
+                  className="mt-4 rounded-lg border p-2 bg-gray-50 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setIsLightboxOpen(true)}
+                >
+                  <Image
+                    src="/images/anchor_position.png"
+                    alt="アンカー位置詳細図"
+                    width={1200}
+                    height={800}
+                    style={{ 
+                      width: '100%',
+                      height: 'auto',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ④ Lightboxコンポーネントをレンダリング */}
+      <Lightbox
+        open={isLightboxOpen}
+        close={() => setIsLightboxOpen(false)}
+        slides={[{ src: "/images/anchor_position.png" }]}
+        plugins={[Zoom]} // Zoomプラグインを有効化
+      />
+    </>
   );
 }
