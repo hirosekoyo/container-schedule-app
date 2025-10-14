@@ -58,8 +58,7 @@ export const TIME_OPTIONS_30_MINUTES = Array.from({ length: 12 }, (_, i) => {
 export const getWindColorClass = (speed: number | null | undefined): string => {
   if (speed == null) return '';
   // if (speed >= 20) return 'bg-red-300/30';
-  if (speed >= 16) return 'bg-red-300/60';
-  if (speed >= 10) return 'bg-yellow-300/50';
+  if (speed >= 16) return 'bg-red-400/80';
+  if (speed >= 10) return 'bg-yellow-300/80';
   return '';
 };
-
