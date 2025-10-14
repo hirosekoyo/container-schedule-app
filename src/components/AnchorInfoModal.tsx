@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 
-// ① Lightbox関連のコンポーネントとCSSをインポート
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
@@ -35,7 +34,6 @@ const limitData = [
 
 export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
   const [isImageVisible, setIsImageVisible] = useState(false);
-  // ② Lightboxの開閉を管理するstateを追加
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   return (
@@ -94,7 +92,7 @@ export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
                   variant="outline"
                   onClick={() => setIsImageVisible(!isImageVisible)}
                 >
-                {isImageVisible ? '画像を閉じる' : '画像を表示'}
+                {isImageVisible ? '画像を閉じる' : '画像を表示（10KB）'}
                 </Button>
               </div>
 
@@ -121,12 +119,19 @@ export function AnchorInfoModal({ open, onOpenChange }: AnchorInfoModalProps) {
         </DialogContent>
       </Dialog>
 
-      {/* ④ Lightboxコンポーネントをレンダリング */}
       <Lightbox
         open={isLightboxOpen}
         close={() => setIsLightboxOpen(false)}
         slides={[{ src: "/images/anchor_position.png" }]}
-        plugins={[Zoom]} // Zoomプラグインを有効化
+        plugins={[Zoom]}
+        // 「前へ」「次へ」のボタンをレンダリングしないように設定
+        render={{
+          buttonPrev: () => null,
+          buttonNext: () => null,
+        }}
+        // カルーセルを有限（ループしない）に設定
+        // スライドが1枚の場合、スワイプやキーボード操作が無効になる
+        carousel={{ finite: true }}
       />
     </>
   );
